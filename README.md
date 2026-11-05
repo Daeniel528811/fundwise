@@ -86,10 +86,6 @@ Reminders are **in-app only**; due checks occur about once per minute while a pa
 Synthetic validation screenshots are retained locally. Public screenshot publication is pending explicit owner approval; no financial screenshots are included in this commit.
 
 
-
-
-
-
 ## Documentation
 
 - [Current proposal reconstruction](docs/proposal.md) and [readable PDF](docs/proposal.pdf).

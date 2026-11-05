@@ -36,3 +36,6 @@ php_error_log
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Keep unapproved screenshots private until publication permission is given
+/docs/screenshots/
