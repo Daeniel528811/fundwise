@@ -25,9 +25,11 @@ function fw_debt_due_notifications(mysqli $conn,int $uid):void {
  if(!fw_has_table($conn,'fw_debts'))return;
  $rows=fw_query($conn,"SELECT d.* FROM fw_debts d WHERE user_id=? AND archived=0 AND next_due<=DATE_ADD(CURDATE(),INTERVAL 3 DAY) AND opening_principal>COALESCE((SELECT SUM(p.principal) FROM fw_debt_payments p WHERE p.debt_id=d.debt_id AND p.user_id=d.user_id),0)",'i',[$uid]);
  foreach($rows as $d){$kind=$d['next_due']<date('Y-m-d')?'overdue':'upcoming';mysqli_begin_transaction($conn);try{
-  if(fw_insert_once($conn,'INSERT IGNORE INTO fw_debt_alerts(debt_id,user_id,due_on,alert_kind) VALUES (?,?,?,?)','iiss',[(int)$d['debt_id'],$uid,$d['next_due'],$kind]))fw_query($conn,'INSERT INTO notifications(user_id,message,is_read) VALUES (?,?,0)','is',[$uid,'Repayment '.$kind.': '.$d['lender'].' · due '.$d['next_due'].'. Review the scheduled payment in Debts & Repayments.']);
+  if(fw_insert_once($conn,'INSERT IGNORE INTO fw_debt_alerts(debt_id,user_id,due_on,alert_kind) VALUES (?,?,?,?)','iiss',[(int)$d['debt_id'],$uid,$d['next_due'],$kind]))fw_query($conn,'INSERT INTO notifications(user_id,message,is_read) VALUES (?,?,0)','is',[$uid,'Repayment '.$kind.': '.$d['lender'].' · due '.$d['next_due'].'. Review the scheduled payment in Debts & Loans.']);
   mysqli_commit($conn);
  }catch(Throwable $e){mysqli_rollback($conn);throw $e;}}
 }
 
 require_once __DIR__.'/reminders.php';
+
+require_once __DIR__.'/loans.php';

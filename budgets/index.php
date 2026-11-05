@@ -482,20 +482,7 @@ require_once __DIR__ . "/../includes/header.php";
 ?>
 <div class="container-fluid px-4 py-4">
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-
-        <div>
-            <h2 class="page-title mb-1">Budgets</h2>
-            <p class="text-muted mb-0">
-                Set spending limits and keep track of your expenses.
-            </p>
-        </div>
-
-        <a href="#budgetForm" class="btn btn-purple">
-            <i class="bi bi-plus-lg me-1"></i> Create Budget
-        </a>
-
-    </div>
+    <div class="fi-page fw-unified-heading"><section class="fi-hero"><div><span class="fi-kicker">BUDGETS</span><h1>Your spending,<br><span>with a plan.</span></h1><p>Set spending limits and follow each budget’s progress.</p></div><div class="fw-hero-end"><div class="fi-hero-icon"><i class="bi bi-pie-chart" aria-hidden="true"></i></div><a href="#budgetForm" class="btn btn-light fw-hero-action"><i class="bi bi-plus-lg" aria-hidden="true"></i> Create budget</a></div></section></div>
 
     <?php if ($message !== ""): ?>
 

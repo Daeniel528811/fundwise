@@ -39,9 +39,16 @@ function fw_personal_reminder_notifications(mysqli $conn,int $uid):void {
 }
 function fw_configured_debt_notifications(mysqli $conn,int $uid):void {
  if(!fw_has_table($conn,'fw_debts'))return;
- $p=fw_notice_preferences($conn,$uid);$lead=max(0,min(365,(int)$p['debt_lead_days']));
- $rows=fw_query($conn,"SELECT d.* FROM fw_debts d WHERE user_id=? AND archived=0 AND next_due<=DATE_ADD(CURDATE(),INTERVAL ? DAY) AND opening_principal>COALESCE((SELECT SUM(principal) FROM fw_debt_payments p WHERE p.debt_id=d.debt_id AND p.user_id=d.user_id),0)",'ii',[$uid,$lead]);
+ $global=fw_notice_preferences($conn,$uid);$loanReady=fw_loan_ready($conn);
+ $rows=fw_query($conn,"SELECT d.* FROM fw_debts d WHERE user_id=? AND archived=0 AND next_due IS NOT NULL",'i',[$uid]);
  foreach($rows as $d){
+  $p=$global;$custom=$loanReady?(fw_query($conn,'SELECT * FROM fw_loan_notice_settings WHERE debt_id=? AND user_id=?','ii',[(int)$d['debt_id'],$uid])[0]??null):null;
+  if($custom){if(!$custom['enabled'])continue;$p['debt_lead_days']=$custom['lead_days'];$p['debt_popup']=$custom['show_popup'];$p['overdue_repeat']=$custom['overdue_repeat'];}
+  $lead=max(0,min(365,(int)$p['debt_lead_days']));if($d['next_due']>(new DateTimeImmutable('today'))->modify('+'.$lead.' days')->format('Y-m-d'))continue;
+  $paid=fw_query($conn,'SELECT COALESCE(SUM(principal),0) AS n FROM fw_debt_payments WHERE debt_id=? AND user_id=?','ii',[(int)$d['debt_id'],$uid])[0]['n'];
+  $unpaid=(float)$d['opening_principal']>(float)$paid;
+  if($loanReady)foreach(fw_loan_rows($conn,$uid,(int)$d['debt_id']) as $part)if(fw_loan_due($part)['total']>0)$unpaid=true;
+  if(!$unpaid)continue;
   $overdue=$d['next_due']<date('Y-m-d');$kind=$overdue?'overdue':'upcoming';$repeat=$p['overdue_repeat'];$bucket='once';
   if($overdue&&$repeat!=='none'){$days=(int)(new DateTimeImmutable($d['next_due']))->diff(new DateTimeImmutable('today'))->days;$bucket=$repeat==='daily'?date('Y-m-d'):(string)intdiv(max(0,$days-1),7);}
   if($bucket==='once'&&fw_query($conn,'SELECT debt_id FROM fw_debt_alerts WHERE debt_id=? AND user_id=? AND due_on=? AND alert_kind=?','iiss',[(int)$d['debt_id'],$uid,$d['next_due'],$kind]))continue;

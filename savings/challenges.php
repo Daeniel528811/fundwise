@@ -412,15 +412,10 @@ ob_start();
 $pageHead = ob_get_clean();
 require_once __DIR__ . "/../includes/header.php";
 ?>
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4"><span class="text-muted small">Build a saving habit around your goals.</span><a class="btn btn-outline-primary btn-sm" href="challenge-link.php"><i class="bi bi-link-45deg" aria-hidden="true"></i> Link a saving routine</a></div>
+
 <?php
 ?>
-            <div class="mb-4">
-                <h2 class="section-title">Savings Challenges</h2>
-                <p class="text-muted">
-                    Set a savings target, track your progress, and stay consistent.
-                </p>
-            </div>
+            <div class="fi-page fw-unified-heading"><section class="fi-hero"><div><span class="fi-kicker">SAVINGS CHALLENGES</span><h1>Build a routine.<br><span>Grow your savings.</span></h1><p>Practice a saving habit during a set period and connect it to a goal.</p></div><div class="fw-hero-end"><div class="fi-hero-icon"><i class="bi bi-trophy" aria-hidden="true"></i></div><a class="btn btn-light fw-hero-action" href="challenge-link.php"><i class="bi bi-link-45deg" aria-hidden="true"></i> Link a saving routine</a></div></section></div>
 
             <?php if ($message): ?>
                 <div class="alert alert-success">

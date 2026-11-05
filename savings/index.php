@@ -625,26 +625,7 @@ require_once __DIR__ . "/../includes/header.php";
 
     <!-- PAGE HEADER -->
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-
-        <div>
-
-            <h2 class="page-title mb-1">Savings Goals</h2>
-
-            <p class="text-muted mb-0">
-                Set financial goals and track your savings progress.
-            </p>
-
-        </div>
-
-        <a href="#goalForm" class="btn btn-purple">
-
-            <i class="bi bi-plus-lg me-1"></i>
-            Create Savings Goal
-
-        </a>
-
-    </div>
+    <div class="fi-page fw-unified-heading"><section class="fi-hero"><div><span class="fi-kicker">SAVINGS GOALS</span><h1>Make room for<br><span>your goals.</span></h1><p>Set a target and follow your savings, one contribution at a time.</p></div><div class="fw-hero-end"><div class="fi-hero-icon"><i class="bi bi-bullseye" aria-hidden="true"></i></div><a href="#goalForm" class="btn btn-light fw-hero-action"><i class="bi bi-plus-lg" aria-hidden="true"></i> Create savings goal</a></div></section></div>
 
     <?php if ($message !== ""): ?>
 

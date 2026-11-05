@@ -522,15 +522,15 @@ require_once __DIR__ . "/../includes/header.php";
 
                         <div class="d-flex flex-wrap gap-2">
                             <a href="?period=<?= urlencode($period) ?>&start_date=<?= urlencode($start_date) ?>&end_date=<?= urlencode($end_date) ?>&export=pdf"
-                               class="btn btn-purple">
+                               class="btn btn-purple fw-export-action">
                                 Export PDF (.pdf)
                             </a>
                             <a href="?period=<?= urlencode($period) ?>&start_date=<?= urlencode($start_date) ?>&end_date=<?= urlencode($end_date) ?>&export=xlsx"
-                               class="btn btn-purple">
+                               class="btn btn-purple fw-export-action">
                                 Export Excel (.xlsx)
                             </a>
                             <a href="?period=<?= urlencode($period) ?>&start_date=<?= urlencode($start_date) ?>&end_date=<?= urlencode($end_date) ?>&export=csv"
-                               class="btn btn-purple">
+                               class="btn btn-purple fw-export-action">
                                 Export CSV (.csv)
                             </a>
                         </div>

@@ -649,16 +649,7 @@ require_once __DIR__ . "/../includes/header.php";
 ?>
 <div class="container-fluid px-4 py-4">
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-        <div>
-            <h2 class="page-title mb-1">Transactions</h2>
-            <p class="text-muted mb-0">Record income and expenses, then search your history.</p>
-        </div>
-
-        <a href="#transactionForm" class="btn btn-purple">
-            <i class="bi bi-plus-lg me-1"></i> Add Transaction
-        </a>
-    </div>
+    <div class="fi-page fw-unified-heading"><section class="fi-hero"><div><span class="fi-kicker">TRANSACTIONS</span><h1>Every transaction,<br><span>in view.</span></h1><p>Record income and expenses, then review your history.</p></div><div class="fw-hero-end"><div class="fi-hero-icon"><i class="bi bi-arrow-left-right" aria-hidden="true"></i></div><a href="#transactionForm" class="btn btn-light fw-hero-action"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add transaction</a></div></section></div>
 
     <?php if ($message !== ""): ?>
         <div class="alert alert-<?php echo htmlspecialchars($message_type); ?> alert-dismissible fade show">
@@ -794,9 +785,9 @@ require_once __DIR__ . "/../includes/header.php";
                                required>
                     </div>
 
-                    <div class="col-12"><label for="spending_label" class="form-label">Spending label (optional)</label><?php $savedLabel=$edit_transaction&&fw_has_table($conn,'fw_spending_labels')?(fw_query($conn,'SELECT label FROM fw_spending_labels WHERE transaction_id=? AND user_id=?','ii',[(int)$edit_transaction['transaction_id'],$user_id])[0]['label']??''):''; ?><input id="spending_label" name="spending_label" maxlength="60" class="form-control" placeholder="Coffee, Groceries, or Meals" value="<?= htmlspecialchars($_POST['spending_label']??$savedLabel,ENT_QUOTES,'UTF-8') ?>"><p class="form-text">Use a label such as Coffee to track that spending in Money Lab. Split mixed purchases into separate amounts.</p></div>
+                    <div class="col-12"><label for="spending_label" class="form-label">Spending label (optional)</label><?php $savedLabel=$edit_transaction&&fw_has_table($conn,'fw_spending_labels')?(fw_query($conn,'SELECT label FROM fw_spending_labels WHERE transaction_id=? AND user_id=?','ii',[(int)$edit_transaction['transaction_id'],$user_id])[0]['label']??''):''; ?><datalist id="transactionLabels"><?php if(fw_has_table($conn,'fw_spending_labels')):foreach(fw_query($conn,"SELECT DISTINCT label FROM fw_spending_labels WHERE user_id=? AND label<>'' ORDER BY label",'i',[$user_id]) as $labelOption):?><option value="<?= htmlspecialchars($labelOption['label'],ENT_QUOTES,'UTF-8') ?>"><?php endforeach;endif;?></datalist><input id="spending_label" name="spending_label" maxlength="60" class="form-control" placeholder="Choose or type a spending label" list="transactionLabels" value="<?= htmlspecialchars($_POST['spending_label']??$savedLabel,ENT_QUOTES,'UTF-8') ?>"><p class="form-text">A spending label groups purchases for Money Lab. It is separate from the description below. Split mixed purchases into separate amounts.</p></div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Description *</label>
+                        <label class="form-label fw-semibold">Description *</label><small class="d-block text-muted mb-2">Describe this individual transaction.</small>
 
                         <input type="text" name="description" class="form-control"
                                maxlength="255"
