@@ -1,0 +1,50 @@
+{
+  "checks": [
+    {
+      "page": "lab",
+      "width": 320,
+      "scroll": 305
+    },
+    {
+      "page": "work",
+      "width": 320,
+      "scroll": 305
+    },
+    {
+      "page": "loan",
+      "width": 320,
+      "scroll": 305
+    },
+    {
+      "page": "lab",
+      "width": 390,
+      "scroll": 375
+    },
+    {
+      "page": "work",
+      "width": 390,
+      "scroll": 375
+    },
+    {
+      "page": "loan",
+      "width": 390,
+      "scroll": 375
+    },
+    {
+      "page": "lab",
+      "width": 1366,
+      "scroll": 1351
+    },
+    {
+      "page": "work",
+      "width": 1366,
+      "scroll": 1351
+    },
+    {
+      "page": "loan",
+      "width": 1366,
+      "scroll": 1351
+    }
+  ],
+  "errors": []
+}

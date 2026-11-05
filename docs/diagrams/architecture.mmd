@@ -1,0 +1,6 @@
+flowchart TD
+    Browser[Browser: HTML / CSS / JavaScript] -->|Forms and Fetch over HTTPS| PHP[PHP: authentication, validation, CRUD]
+    PHP -->|Prepared MySQLi queries| DB[(MySQL / MariaDB)]
+    Browser -->|Reference rates| Rates[Frankfurter API]
+    Browser --> CDN[CDN libraries and fonts]
+    PHP -->|Owner-authorized route| Files[Private receipt files]

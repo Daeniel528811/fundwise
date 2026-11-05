@@ -1,0 +1,379 @@
+erDiagram
+    fw_account_security {
+        int user_id PK
+        int credential_version
+        char recovery_hash
+        timestamp updated_at
+    }
+    fw_audit_log {
+        bigint audit_id PK
+        int user_id
+        varchar event_name
+        bigint entity_id
+        timestamp created_at
+    }
+    fw_budget_alerts {
+        int user_id PK
+        int budget_id PK
+        date period_start PK
+        date period_end PK
+        int threshold_value PK
+        timestamp created_at
+    }
+    fw_challenge_goals {
+        int challenge_id PK
+        int user_id
+        int goal_id
+        varchar behavior
+    }
+    fw_debt_alerts {
+        int debt_id PK
+        int user_id
+        date due_on PK
+        varchar alert_kind PK
+    }
+    fw_debt_payments {
+        int payment_id PK
+        int debt_id
+        int user_id
+        date paid_on
+        decimal principal
+        decimal interest
+        decimal fees
+        varchar note
+        timestamp created_at
+    }
+    fw_debts {
+        int debt_id PK
+        int user_id
+        varchar lender
+        varchar description
+        decimal opening_principal
+        date opened_on
+        date next_due
+        decimal scheduled_amount
+        int version
+        tinyint archived
+        timestamp created_at
+    }
+    fw_goal_archives {
+        int goal_id PK
+        int user_id
+        timestamp archived_at
+    }
+    fw_lab_days {
+        int experiment_id PK
+        int user_id
+        date work_date PK
+        varchar recording_kind
+        decimal recorded_amount
+        int recorded_count
+        timestamp updated_at
+    }
+    fw_lab_details {
+        int experiment_id PK
+        int user_id
+        varchar behavior_plan
+        date baseline_start
+        date baseline_end
+        int baseline_count
+        tinyint baseline_confirmed
+        varchar practical_choice
+        varchar review_notes
+        timestamp updated_at
+    }
+    fw_lab_scopes {
+        int experiment_id PK
+        int user_id
+        varchar label
+    }
+    fw_loan_allocations {
+        int payment_id PK
+        int user_id
+        int debt_id
+        int installment_id
+    }
+    fw_loan_installments {
+        int installment_id PK
+        int user_id
+        int debt_id
+        int sequence_no
+        date due_on
+        decimal principal
+        decimal interest
+        decimal fees
+    }
+    fw_loan_notice_settings {
+        int debt_id PK
+        int user_id
+        tinyint enabled
+        int lead_days
+        tinyint show_popup
+        varchar overdue_repeat
+    }
+    fw_login_limits {
+        char subject_key PK
+        int attempts
+        datetime window_start
+    }
+    fw_notice_events {
+        int user_id PK
+        varchar event_key PK
+        int notification_id
+        timestamp created_at
+    }
+    fw_notice_preferences {
+        int user_id PK
+        smallint debt_lead_days
+        tinyint budget_popup
+        tinyint debt_popup
+        varchar overdue_repeat
+    }
+    fw_personal_reminders {
+        int reminder_id PK
+        int user_id
+        varchar title
+        varchar note
+        datetime remind_at
+        tinyint show_popup
+        varchar status
+        datetime delivered_at
+        int notification_id
+        int revision
+        timestamp created_at
+    }
+    fw_purchase_scenarios {
+        bigint scenario_id PK
+        int user_id
+        varchar purchase_title
+        date purchase_date
+        char currency_code
+        decimal expected_amount
+        longtext inputs_json
+        longtext result_json
+        varchar outcome
+        decimal actual_amount
+        timestamp created_at
+        timestamp updated_at
+    }
+    fw_record_history {
+        bigint history_id PK
+        int user_id
+        varchar entity_type
+        bigint entity_id
+        varchar event_name
+        longtext before_data
+        longtext after_data
+        timestamp created_at
+    }
+    fw_requests {
+        int user_id PK
+        char request_key PK
+        timestamp created_at
+    }
+    fw_spending_labels {
+        int transaction_id PK
+        int user_id
+        varchar label
+    }
+    fw_work_cost_links {
+        int expense_id PK
+        int user_id
+        int session_id
+        int transaction_id UK
+    }
+    fw_work_expense_kinds {
+        bigint expense_id PK
+        int user_id
+        varchar cost_kind
+    }
+    fw_work_session_details {
+        int session_id PK
+        int user_id
+        varchar work_source
+        smallint extra_minutes
+        varchar payment_status
+        decimal received_amount
+        date received_date
+        int income_transaction_id UK
+        int record_version
+        timestamp updated_at
+    }
+    fw_work_times {
+        int session_id PK
+        int user_id
+        datetime started_at
+        datetime ended_at
+        int break_minutes
+    }
+    money_lab_experiments {
+        int experiment_id PK
+        int user_id
+        int category_id
+        varchar experiment_title
+        date start_date
+        date end_date
+        smallint duration_days
+        tinyint reduction_percent
+        decimal baseline_amount
+        varchar baseline_source
+        timestamp created_at
+    }
+    users {
+        int user_id PK
+        varchar full_name
+        varchar email UK
+        varchar password
+        varchar preferred_currency
+        varchar theme
+        timestamp created_at
+    }
+    work_session_expenses {
+        bigint expense_id PK
+        int session_id
+        varchar expense_description
+        decimal amount
+    }
+    work_sessions {
+        int session_id PK
+        int user_id
+        date session_date
+        decimal hours_worked
+        decimal gross_earnings
+        decimal work_expenses
+        varchar notes
+        timestamp created_at
+    }
+    categories {
+        int category_id PK
+        int user_id FK
+        varchar category_name
+        string category_type
+        tinyint is_default
+        timestamp created_at
+    }
+    notifications {
+        int notification_id PK
+        int user_id FK
+        varchar message
+        tinyint is_read
+        timestamp created_at
+    }
+    savings_allocations {
+        int allocation_id PK
+        int user_id FK
+        varchar allocation_name
+        decimal allocation_percentage
+        timestamp created_at
+        timestamp updated_at
+    }
+    savings_challenges {
+        int challenge_id PK
+        int user_id FK
+        varchar challenge_name
+        decimal target_amount
+        date start_date
+        date end_date
+        decimal current_amount
+        string status
+        timestamp created_at
+    }
+    savings_goals {
+        int goal_id PK
+        int user_id FK
+        varchar goal_name
+        decimal target_amount
+        date target_date
+        timestamp created_at
+    }
+    transactions {
+        int transaction_id PK
+        int user_id FK
+        int category_id FK
+        string transaction_type
+        decimal amount
+        varchar description
+        date transaction_date
+        varchar receipt_image
+        timestamp created_at
+    }
+    budgets {
+        int budget_id PK
+        int user_id FK
+        int category_id FK
+        decimal budget_limit
+        date start_date
+        date end_date
+        timestamp created_at
+    }
+    savings_contributions {
+        int contribution_id PK
+        int goal_id FK
+        string contribution_type
+        decimal amount
+        date contribution_date
+        varchar notes
+        timestamp created_at
+    }
+    users ||..o{ fw_account_security : "user_id (application reference)"
+    users ||..o{ fw_audit_log : "user_id (application reference)"
+    users ||..o{ fw_budget_alerts : "user_id (application reference)"
+    savings_challenges ||..o{ fw_challenge_goals : "challenge_id (application reference)"
+    users ||..o{ fw_challenge_goals : "user_id (application reference)"
+    savings_goals ||..o{ fw_challenge_goals : "goal_id (application reference)"
+    fw_debts ||..o{ fw_debt_alerts : "debt_id (application reference)"
+    users ||..o{ fw_debt_alerts : "user_id (application reference)"
+    fw_debts ||..o{ fw_debt_payments : "debt_id (application reference)"
+    users ||..o{ fw_debt_payments : "user_id (application reference)"
+    users ||..o{ fw_debts : "user_id (application reference)"
+    savings_goals ||..o{ fw_goal_archives : "goal_id (application reference)"
+    users ||..o{ fw_goal_archives : "user_id (application reference)"
+    money_lab_experiments ||..o{ fw_lab_days : "experiment_id (application reference)"
+    users ||..o{ fw_lab_days : "user_id (application reference)"
+    money_lab_experiments ||..o{ fw_lab_details : "experiment_id (application reference)"
+    users ||..o{ fw_lab_details : "user_id (application reference)"
+    money_lab_experiments ||..o{ fw_lab_scopes : "experiment_id (application reference)"
+    users ||..o{ fw_lab_scopes : "user_id (application reference)"
+    fw_debt_payments ||..o{ fw_loan_allocations : "payment_id (application reference)"
+    users ||..o{ fw_loan_allocations : "user_id (application reference)"
+    fw_debts ||..o{ fw_loan_allocations : "debt_id (application reference)"
+    fw_loan_installments ||..o{ fw_loan_allocations : "installment_id (application reference)"
+    users ||..o{ fw_loan_installments : "user_id (application reference)"
+    fw_debts ||..o{ fw_loan_installments : "debt_id (application reference)"
+    fw_debts ||..o{ fw_loan_notice_settings : "debt_id (application reference)"
+    users ||..o{ fw_loan_notice_settings : "user_id (application reference)"
+    users ||..o{ fw_notice_events : "user_id (application reference)"
+    notifications ||..o{ fw_notice_events : "notification_id (application reference)"
+    users ||..o{ fw_notice_preferences : "user_id (application reference)"
+    users ||..o{ fw_personal_reminders : "user_id (application reference)"
+    notifications ||..o{ fw_personal_reminders : "notification_id (application reference)"
+    users ||..o{ fw_purchase_scenarios : "user_id (application reference)"
+    users ||..o{ fw_record_history : "user_id (application reference)"
+    users ||..o{ fw_requests : "user_id (application reference)"
+    transactions ||..o{ fw_spending_labels : "transaction_id (application reference)"
+    users ||..o{ fw_spending_labels : "user_id (application reference)"
+    work_session_expenses ||..o{ fw_work_cost_links : "expense_id (application reference)"
+    users ||..o{ fw_work_cost_links : "user_id (application reference)"
+    work_sessions ||..o{ fw_work_cost_links : "session_id (application reference)"
+    transactions ||..o{ fw_work_cost_links : "transaction_id (application reference)"
+    work_session_expenses ||..o{ fw_work_expense_kinds : "expense_id (application reference)"
+    users ||..o{ fw_work_expense_kinds : "user_id (application reference)"
+    work_sessions ||..o{ fw_work_session_details : "session_id (application reference)"
+    users ||..o{ fw_work_session_details : "user_id (application reference)"
+    transactions ||..o{ fw_work_session_details : "income_transaction_id (application reference)"
+    work_sessions ||..o{ fw_work_times : "session_id (application reference)"
+    users ||..o{ fw_work_times : "user_id (application reference)"
+    users ||..o{ money_lab_experiments : "user_id (application reference)"
+    categories ||..o{ money_lab_experiments : "category_id (application reference)"
+    work_sessions ||..o{ work_session_expenses : "session_id (application reference)"
+    users ||..o{ work_sessions : "user_id (application reference)"
+    users ||--o{ categories : "user_id (physical FK)"
+    users ||--o{ notifications : "user_id (physical FK)"
+    users ||--o{ savings_allocations : "user_id (physical FK)"
+    users ||--o{ savings_challenges : "user_id (physical FK)"
+    users ||--o{ savings_goals : "user_id (physical FK)"
+    users ||--o{ transactions : "user_id (physical FK)"
+    categories ||--o{ transactions : "category_id (physical FK)"
+    users ||--o{ budgets : "user_id (physical FK)"
+    categories ||--o{ budgets : "category_id (physical FK)"
+    savings_goals ||--o{ savings_contributions : "goal_id (physical FK)"

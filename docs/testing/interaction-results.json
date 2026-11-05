@@ -1,0 +1,18 @@
+{
+  "passed": 12,
+  "checks": [
+    "baseline displays matching and unclassified descriptions",
+    "existing labels suggested for selected category",
+    "day review shows actual matching expense",
+    "manual mode excludes unused time fields",
+    "timed mode reveals dates and locks calculated hours",
+    "overnight work calculates eight hours after break",
+    "overnight work saves through browser form",
+    "schedule preview handles rounding and short months",
+    "schedule review checkbox remains selected",
+    "schedule creates from reviewed browser form",
+    "locked currency presents a static value",
+    "all settings password controls follow requested eye states"
+  ],
+  "errors": []
+}

@@ -1,0 +1,365 @@
+{
+  "date": "2026-11-05",
+  "environment": "isolated local clean installation",
+  "passed": 51,
+  "checks": [
+    {
+      "route": "/index.php",
+      "width": 1366,
+      "page": 1351,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/insights/earnings.php",
+      "width": 1366,
+      "page": 1351,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/insights/money-lab.php",
+      "width": 1366,
+      "page": 1351,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/insights/purchase-map.php",
+      "width": 1366,
+      "page": 1351,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/debts/?debt=3",
+      "width": 1366,
+      "page": 1351,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/savings/challenge-link.php",
+      "width": 1366,
+      "page": 1351,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/profile/",
+      "width": 1366,
+      "page": 1351,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/transactions/",
+      "width": 1366,
+      "page": 1351,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/categories/",
+      "width": 1366,
+      "page": 1351,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/budgets/",
+      "width": 1366,
+      "page": 1351,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/savings/",
+      "width": 1366,
+      "page": 1351,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/savings/challenges.php",
+      "width": 1366,
+      "page": 1351,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/savings/allocations.php",
+      "width": 1366,
+      "page": 1351,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/reports/",
+      "width": 1366,
+      "page": 1351,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/currency/",
+      "width": 1366,
+      "page": 1366,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/notifications/",
+      "width": 1366,
+      "page": 1351,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/notifications/reminders.php",
+      "width": 1366,
+      "page": 1351,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/index.php",
+      "width": 768,
+      "page": 753,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/insights/earnings.php",
+      "width": 768,
+      "page": 753,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/insights/money-lab.php",
+      "width": 768,
+      "page": 753,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/insights/purchase-map.php",
+      "width": 768,
+      "page": 753,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/debts/?debt=3",
+      "width": 768,
+      "page": 753,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/savings/challenge-link.php",
+      "width": 768,
+      "page": 768,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/profile/",
+      "width": 768,
+      "page": 753,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/transactions/",
+      "width": 768,
+      "page": 753,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/categories/",
+      "width": 768,
+      "page": 753,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/budgets/",
+      "width": 768,
+      "page": 753,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/savings/",
+      "width": 768,
+      "page": 753,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/savings/challenges.php",
+      "width": 768,
+      "page": 753,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/savings/allocations.php",
+      "width": 768,
+      "page": 753,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/reports/",
+      "width": 768,
+      "page": 753,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/currency/",
+      "width": 768,
+      "page": 768,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/notifications/",
+      "width": 768,
+      "page": 768,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/notifications/reminders.php",
+      "width": 768,
+      "page": 753,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/index.php",
+      "width": 375,
+      "page": 360,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/insights/earnings.php",
+      "width": 375,
+      "page": 360,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/insights/money-lab.php",
+      "width": 375,
+      "page": 360,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/insights/purchase-map.php",
+      "width": 375,
+      "page": 360,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/debts/?debt=3",
+      "width": 375,
+      "page": 360,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/savings/challenge-link.php",
+      "width": 375,
+      "page": 360,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/profile/",
+      "width": 375,
+      "page": 360,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/transactions/",
+      "width": 375,
+      "page": 360,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/categories/",
+      "width": 375,
+      "page": 360,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/budgets/",
+      "width": 375,
+      "page": 360,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/savings/",
+      "width": 375,
+      "page": 360,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/savings/challenges.php",
+      "width": 375,
+      "page": 360,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/savings/allocations.php",
+      "width": 375,
+      "page": 360,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/reports/",
+      "width": 375,
+      "page": 360,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/currency/",
+      "width": 375,
+      "page": 360,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/notifications/",
+      "width": 375,
+      "page": 360,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    },
+    {
+      "route": "/notifications/reminders.php",
+      "width": 375,
+      "page": 360,
+      "fatal": false,
+      "font": "\"Plus Jakarta Sans\", sans-serif"
+    }
+  ],
+  "errors": []
+}

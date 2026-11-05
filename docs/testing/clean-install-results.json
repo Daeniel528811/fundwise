@@ -1,0 +1,8 @@
+{
+    "date": "2026-11-05",
+    "database": "isolated verification database",
+    "tables": 38,
+    "initial_rows": 0,
+    "foreign_key_checks": 1,
+    "passed": true
+}

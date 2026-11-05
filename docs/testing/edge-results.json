@@ -1,0 +1,22 @@
+{
+  "passed": 17,
+  "checks": [
+    "test account a created",
+    "test account a login",
+    "test account b created",
+    "test account b login",
+    "manual payment before planning retained",
+    "plan uses remaining principal after earlier payments",
+    "earlier payment cannot silently invalidate schedule",
+    "foreign installment edit denied",
+    "schedule without allocations clears",
+    "earlier payment can be corrected after clearing schedule",
+    "manual schedule still supported",
+    "per-loan lead time overrides shorter global lead",
+    "disabled per-loan reminders suppress delivery",
+    "CSRF blocks installment creation",
+    "first reviewed schedule request accepted",
+    "duplicate schedule submission cannot duplicate installments",
+    "correction and reminder actions leave cash transactions unchanged"
+  ]
+}

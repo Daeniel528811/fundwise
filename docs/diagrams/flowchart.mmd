@@ -1,0 +1,11 @@
+flowchart TD
+    A[Protected request] --> B{Valid session?}
+    B -->|No| L[Sign in]
+    B -->|Yes| C{CSRF and request token valid?}
+    C -->|No| E[Safe rejection; no mutation]
+    C -->|Yes| D{Record owned and input valid?}
+    D -->|No| E
+    D -->|Yes| F{Business rules / version valid?}
+    F -->|No| E
+    F -->|Yes| G[Atomic save and supported audit/history]
+    G --> H[Feedback and refreshed view]
