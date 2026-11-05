@@ -1,0 +1,4 @@
+# Private financial receipts must be served via transactions/receipt.php
+# only after checking which user owns the transaction.
+Require all denied
+Options -Indexes
