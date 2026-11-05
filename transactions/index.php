@@ -87,8 +87,12 @@ function deleteReceiptFile($receipt_path)
     }
 }
 
+// Validate explicit spending labels before any transaction mutation.
+$labelError='';if($_SERVER['REQUEST_METHOD']==='POST'){try{fw_label($_POST['spending_label']??'');}catch(InvalidArgumentException $e){$labelError=$e->getMessage();}}
+if($_SERVER['REQUEST_METHOD']==='POST'&&fw_has_table($conn,'fw_work_cost_links')&&fw_query($conn,'SELECT expense_id FROM fw_work_cost_links WHERE transaction_id=? AND user_id=?','ii',[fw_positive_id($_POST['transaction_id']??null),$user_id]))$labelError='This expense is linked to a work session. Open Real Earnings Lens → Manage transaction links and unlink it before editing or deleting.';
+if($labelError!==''){$message=$labelError;$message_type='danger';}
 // Handle form submissions
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
+if ($_SERVER["REQUEST_METHOD"] === "POST" && $labelError === "") {
 
     // Verify CSRF token
     if (
@@ -789,6 +793,7 @@ require_once __DIR__ . "/../includes/header.php";
                                required>
                     </div>
 
+                    <div class="col-12"><label for="spending_label" class="form-label">Spending label (optional)</label><?php $savedLabel=$edit_transaction&&fw_has_table($conn,'fw_spending_labels')?(fw_query($conn,'SELECT label FROM fw_spending_labels WHERE transaction_id=? AND user_id=?','ii',[(int)$edit_transaction['transaction_id'],$user_id])[0]['label']??''):''; ?><input id="spending_label" name="spending_label" maxlength="60" class="form-control" placeholder="Coffee, Groceries, or Meals" value="<?= htmlspecialchars($_POST['spending_label']??$savedLabel,ENT_QUOTES,'UTF-8') ?>"><p class="form-text">For expenses: Money Lab can match this exact label within the selected category. Label other food separately. For mixed purchases, record separate amounts whose sum equals the receipt total.</p></div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Description *</label>
 
@@ -970,7 +975,7 @@ require_once __DIR__ . "/../includes/header.php";
                                 </td>
 
                                 <td>
-                                    <?php echo htmlspecialchars($transaction["description"]); ?>
+                                    <?php echo htmlspecialchars($transaction["description"]); ?><?php if(fw_has_table($conn,'fw_spending_labels')):$tl=fw_query($conn,'SELECT label FROM fw_spending_labels WHERE transaction_id=? AND user_id=?','ii',[(int)$transaction['transaction_id'],$user_id])[0]['label']??'';if($tl!==''):?><small class="d-block text-muted">Label: <?= htmlspecialchars($tl,ENT_QUOTES,'UTF-8') ?></small><?php endif;endif;?>
                                 </td>
 
                                 <td>

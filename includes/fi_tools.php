@@ -7,7 +7,7 @@ function fi_v2_ready(mysqli $conn): bool {
     return true;
 }
 function fi_v2_notice(): void {
-    echo '<div class="alert alert-warning mt-3" role="alert"><strong>One-time update needed.</strong> Import <code>20261102_financial_intelligence_v2.sql</code> into your existing database, then refresh. Existing financial records are kept.</div>';
+    echo '<div class="alert alert-warning mt-3" role="alert"><strong>One-time update needed.</strong> Import <code>20261102_financial_intelligence_v2.sql</code> and <code>20261103_general_update.sql</code> into your existing database, then refresh. Existing financial records are kept.</div>';
 }
 function fi_cents($value): int { return (int) round((float)$value * 100); }
 function fi_amount(int $cents): string { return number_format($cents / 100, 2, '.', ''); }

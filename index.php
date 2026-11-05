@@ -515,6 +515,7 @@ require_once __DIR__ . "/includes/header.php";
     <div class="fw-section-heading mt-2">
         <div><h2>Money insights</h2><p>Track how your money moves and where you plan to put it.</p></div>
     </div>
+    <?php require __DIR__."/includes/dashboard_budgets.php"; ?>
     <section class="row g-4 mb-4" aria-label="Financial charts and savings goals">
         <div class="col-xl-7">
             <div class="fw-dashboard-panel">

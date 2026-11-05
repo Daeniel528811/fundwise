@@ -423,4 +423,5 @@ require_once __DIR__ . "/../includes/header.php";
 })();
 </script>
 
+<section class="card mt-4 mb-4 fw-profile-session"><div class="card-body"><h2 class="h5">Your session</h2><p class="text-muted">Sign out of Fundwise on this device.</p><form method="post" action="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/auth/logout.php"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'],ENT_QUOTES,'UTF-8') ?>"><button class="btn btn-outline-danger" type="submit"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Log out</button></form></div></section>
 <?php require_once __DIR__ . "/../includes/footer.php"; ?>

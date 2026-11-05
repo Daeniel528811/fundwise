@@ -1,0 +1,6 @@
+<?php
+$budgetMessages=$_SESSION['fw_budget_dialog']??[];unset($_SESSION['fw_budget_dialog']);
+if($budgetMessages):?>
+<dialog id="fwBudgetDialog" aria-labelledby="fwBudgetDialogTitle" style="width:min(92vw,480px);max-height:80vh;overflow:auto;border:1px solid #41708c;border-radius:20px;padding:24px;background:var(--bs-body-bg,#15263a);color:var(--bs-body-color,#eef5ff)"><h2 id="fwBudgetDialogTitle" class="h4">Budget limit exceeded</h2><p>Your recorded spending has crossed a budget limit.</p><?php foreach($budgetMessages as $m):?><p class="border rounded p-3"><?= htmlspecialchars($m,ENT_QUOTES,'UTF-8') ?></p><?php endforeach;?><div class="d-flex flex-wrap gap-2"><a class="btn btn-primary" href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/budgets/">View budgets</a><a class="btn btn-outline-primary" href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/transactions/">Review expenses</a><form method="dialog"><button class="btn btn-outline-secondary" autofocus>Dismiss</button></form></div></dialog>
+<style>#fwBudgetDialog::backdrop{background:rgba(4,12,25,.65)}</style><script>(()=>{const d=document.getElementById('fwBudgetDialog');if(d&&typeof d.showModal==='function')d.showModal();})();</script>
+<?php endif; ?>

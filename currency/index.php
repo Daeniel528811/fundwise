@@ -566,16 +566,38 @@ document.getElementById("converterForm").addEventListener(
 );
 
 
-// Swap selected currencies
-swapButton.addEventListener("click", function() {
+// Swap selected currencies and clear both search filters
+swapButton.addEventListener("click", function(event) {
+
+    event.preventDefault();
 
     const from = fromSelect.value;
     const to = toSelect.value;
+
+    if (
+        !currencyList.some(currency => currency.code === from) ||
+        !currencyList.some(currency => currency.code === to)
+    ) {
+        statusMessage.textContent = "Please select both currencies before swapping.";
+        statusMessage.classList.add("text-danger");
+        resultBox.style.display = "none";
+        return;
+    }
+
+    [fromSelect, toSelect].forEach(select => {
+        const searchInput = select.parentElement.querySelector('input[type="text"]');
+        if (searchInput) searchInput.value = "";
+    });
+
+    // Restore options removed by the search before assigning swapped values.
+    populateCurrencyDropdowns();
 
     fromSelect.value = to;
     toSelect.value = from;
 
     resultBox.style.display = "none";
+    statusMessage.classList.remove("text-danger");
+    statusMessage.textContent = "Currencies swapped.";
 
 });
 

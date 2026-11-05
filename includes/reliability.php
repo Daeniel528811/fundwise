@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/input.php';
+require_once __DIR__.'/general.php';
 function fw_text_length(string $value):int {
     $length=preg_match_all('/./us',$value);
     return $length===false?PHP_INT_MAX:$length;
@@ -29,13 +30,26 @@ function fw_revision(mysqli $conn,int $uid,string $entity,int $id,string $event,
 function fw_execute_transaction_change(mysqli $conn,mysqli_stmt $stmt,int $uid,int $id,?array $before,bool $deleting=false):bool {
     if(!mysqli_begin_transaction($conn))return false;
     try{
+        fw_query($conn,'SELECT user_id FROM users WHERE user_id=? FOR UPDATE','i',[$uid]);
         if($id>0){
             $before=fw_query($conn,'SELECT * FROM transactions WHERE transaction_id=? AND user_id=? FOR UPDATE','ii',[$id,$uid])[0]??null;
             if(!$before)throw new RuntimeException('Transaction is unavailable.');
+            if(fw_has_table($conn,'fw_spending_labels'))$before['spending_label']=fw_query($conn,'SELECT label FROM fw_spending_labels WHERE transaction_id=? AND user_id=?','ii',[$id,$uid])[0]['label']??'';
         }
+        if($id>0&&fw_has_table($conn,'fw_work_cost_links')&&fw_query($conn,'SELECT expense_id FROM fw_work_cost_links WHERE transaction_id=? AND user_id=?','ii',[$id,$uid]))throw new RuntimeException('Unlink this work expense in Real Earnings Lens before changing it.');
         if(!mysqli_stmt_execute($stmt))throw new RuntimeException('Transaction write failed.');
         $savedId=$id>0?$id:(int)mysqli_stmt_insert_id($stmt);
+        if(fw_has_table($conn,'fw_spending_labels')){
+            if($deleting)fw_query($conn,'DELETE FROM fw_spending_labels WHERE transaction_id=? AND user_id=?','ii',[$savedId,$uid]);
+            elseif(array_key_exists('spending_label',$_POST)){
+                $label=fw_label($_POST['spending_label']);
+                if(($_POST['transaction_type']??'')!=='expense')$label='';
+                fw_query($conn,'DELETE FROM fw_spending_labels WHERE transaction_id=? AND user_id=?','ii',[$savedId,$uid]);
+                if($label!=='')fw_query($conn,'INSERT INTO fw_spending_labels(transaction_id,user_id,label) VALUES (?,?,?)','iis',[$savedId,$uid,$label]);
+            }
+        }
         $after=$deleting?null:(fw_query($conn,'SELECT * FROM transactions WHERE transaction_id=? AND user_id=?','ii',[$savedId,$uid])[0]??null);
+        if($after&&fw_has_table($conn,'fw_spending_labels'))$after['spending_label']=fw_query($conn,'SELECT label FROM fw_spending_labels WHERE transaction_id=? AND user_id=?','ii',[$savedId,$uid])[0]['label']??'';
         fw_revision($conn,$uid,'transaction',$savedId,$deleting?'deleted':($before?'updated':'created'),$before,$after);
         if(!mysqli_commit($conn))throw new RuntimeException('Transaction commit failed.');
         return true;
@@ -84,7 +98,7 @@ function fw_budget_notifications(mysqli $conn,int $uid): void {
     $budgets=fw_query($conn,"SELECT b.*,c.category_name,COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.user_id=b.user_id AND t.category_id=b.category_id AND t.transaction_type='expense' AND t.transaction_date BETWEEN b.start_date AND LEAST(b.end_date,CURDATE())),0) AS spent FROM budgets b JOIN categories c ON c.category_id=b.category_id AND c.user_id=b.user_id WHERE b.user_id=? AND CURDATE() BETWEEN b.start_date AND b.end_date",'i',[$uid]);
     foreach($budgets as $b){
         $limit=(float)$b['budget_limit'];$spent=(float)$b['spent'];if($limit<=0||$spent<$limit*.8)continue;
-        $threshold=$spent>=$limit?100:80;
+        $threshold=$spent>$limit?101:($spent==$limit?100:80);
         mysqli_begin_transaction($conn);
         try {
             $newAlert=fw_insert_once($conn,'INSERT IGNORE INTO fw_budget_alerts(user_id,budget_id,period_start,period_end,threshold_value) VALUES (?,?,?,?,?)','iissi',[$uid,(int)$b['budget_id'],$b['start_date'],$b['end_date'],$threshold]);
@@ -94,11 +108,12 @@ function fw_budget_notifications(mysqli $conn,int $uid): void {
                 fw_query($conn,'INSERT INTO notifications(user_id,message,is_read) VALUES (?,?,0)','is',[$uid,$message]);
             }
             if(!mysqli_commit($conn))throw new RuntimeException('Unable to save alert.');
+            if($newAlert&&$threshold===101)$_SESSION['fw_budget_dialog'][]=$message;
         }catch(Throwable $e){mysqli_rollback($conn);throw $e;}
     }
 }
 function fw_currency_locked(mysqli $conn,int $uid): bool {
-    foreach(['transactions','savings_goals','budgets','savings_challenges','work_sessions','money_lab_experiments'] as $table){
+    foreach(['transactions','savings_goals','budgets','savings_challenges','work_sessions','money_lab_experiments','fw_debts'] as $table){
         $rows=fw_query($conn,'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?','s',[$table]);
         if($rows && fw_query($conn,"SELECT 1 FROM `$table` WHERE user_id=? LIMIT 1",'i',[$uid]))return true;
     }

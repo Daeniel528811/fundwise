@@ -19,6 +19,7 @@ $__navSections = [
     'Financial intelligence' => [
         ['Money Lab','/insights/money-lab.php','bi-flask','/insights/money-lab.php'],
         ['Purchase Map','/insights/purchase-map.php','bi-signpost-split','/insights/purchase-map.php'],
+        ['Debts & Repayments','/debts/','bi-wallet2','/debts/index.php'],
         ['Real Earnings Lens','/insights/earnings.php','bi-briefcase','/insights/earnings.php'],
     ],
     'Insights & tools' => [
