@@ -16,12 +16,15 @@
   document.querySelectorAll('[data-fw-password-toggle]').forEach(button => {
     const input = document.getElementById(button.dataset.fwPasswordToggle);
     if (!input) return;
+    button.setAttribute('aria-pressed',String(input.type === 'text'));
+    button.innerHTML = input.type === 'text' ? '<i class="bi bi-eye" aria-hidden="true"></i>' : '<i class="bi bi-eye-slash" aria-hidden="true"></i>';
     button.addEventListener('click',() => {
       const isShown = input.type === 'text';
       input.type = isShown ? 'password' : 'text';
       button.setAttribute('aria-label',isShown ? 'Show password' : 'Hide password');
       button.title = isShown ? 'Show password' : 'Hide password';
-      button.innerHTML = isShown ? '<i class="bi bi-eye"></i>' : '<i class="bi bi-eye-slash"></i>';
+      button.innerHTML = isShown ? '<i class="bi bi-eye-slash" aria-hidden="true"></i>' : '<i class="bi bi-eye" aria-hidden="true"></i>';
+      button.setAttribute('aria-pressed',String(!isShown));
     });
   });
   const page=document.title.split('|')[0].trim().toLowerCase();

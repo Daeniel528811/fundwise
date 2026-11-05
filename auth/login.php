@@ -65,20 +65,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/css/app.css?v=reliability-20261102" rel="stylesheet">
 <link href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/reliability.css?v=20261102" rel="stylesheet">
 <link href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/refinements.css?v=20261104-polish2" rel="stylesheet">
+<link href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/css/auth-refinement.css?v=20261104-auth1" rel="stylesheet">
 </head>
 <body>
-  <main class="fw-auth">
+  <main class="fw-auth fw-auth-refined">
     <aside class="fw-auth-side" aria-label="About Fundwise">
       <a class="fw-auth-brand" href="login.php">
         <span class="fw-brand-icon"><img src="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/assets/fundwise-mark.png" alt=""></span>
         <span><strong>Fundwise</strong></span>
       </a>
-      <div class="fw-auth-feature"><h1>Track your money.<br><span>Plan ahead.</span></h1><p>Income, expenses, budgets, and savings in one place.</p></div>
+      <div class="fw-auth-feature"><span class="fw-auth-eyebrow">YOUR MONEY, IN VIEW</span><h1>Track your money.<br><span>Plan ahead.</span></h1><p>Income, expenses, budgets, and savings in one place.</p><div class="fw-auth-pillars"><span><i class="bi bi-arrow-left-right" aria-hidden="true"></i>Track daily</span><span><i class="bi bi-pie-chart" aria-hidden="true"></i>Plan spending</span><span><i class="bi bi-piggy-bank" aria-hidden="true"></i>Build savings</span></div></div>
       <div class="fw-auth-art" aria-hidden="true"><img src="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/assets/fundwise-mark.png" alt=""></div>
     </aside>
     <section class="fw-auth-form-side" aria-label="Sign in">
       <div class="fw-auth-form-wrap">
-        <h2>Sign in to Fundwise</h2>
+        <span class="fw-auth-kicker">WELCOME BACK</span><h2>Sign in to Fundwise</h2><p class="fw-auth-intro">Pick up where you left off.</p>
         <?php if ($message !== ''): ?>
           <div class="alert alert-danger" role="alert"><i class="bi bi-exclamation-circle me-2" aria-hidden="true"></i><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div>
         <?php endif; ?>
@@ -94,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <label for="fwLoginPassword">Password</label>
             <div class="fw-password-wrap">
               <input id="fwLoginPassword" type="password" name="password" class="form-control" placeholder="Enter your password" autocomplete="current-password" required>
-              <button type="button" class="fw-password-btn" data-fw-password-toggle="fwLoginPassword" aria-label="Show password" title="Show password"><i class="bi bi-eye" aria-hidden="true"></i></button>
+              <button type="button" class="fw-password-btn" data-fw-password-toggle="fwLoginPassword" aria-label="Show password" title="Show password"><i class="bi bi-eye-slash" aria-hidden="true"></i></button>
             </div>
           </div>
           <button class="btn btn-primary fw-auth-submit w-100 mt-2" type="submit">Sign in <i class="bi bi-arrow-right ms-2" aria-hidden="true"></i></button>
@@ -104,6 +105,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     </section>
   </main>
-  <script src="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/js/ui.js?v=20261104-polish2"></script>
+  <script src="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/js/ui.js?v=20261104-auth1"></script>
 </body>
 </html>
