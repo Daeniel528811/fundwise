@@ -651,8 +651,8 @@ require_once __DIR__ . "/../includes/header.php";
 
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
-            <h2 class="page-title mb-1">Income & Expenses</h2>
-            <p class="text-muted mb-0">Manage and monitor your financial transactions.</p>
+            <h2 class="page-title mb-1">Transactions</h2>
+            <p class="text-muted mb-0">Record income and expenses, then search your history.</p>
         </div>
 
         <a href="#transactionForm" class="btn btn-purple">
@@ -668,10 +668,11 @@ require_once __DIR__ . "/../includes/header.php";
     <?php endif; ?>
 
     <!-- SUMMARY CARDS -->
+    <p class="fw-inline-note mb-3">All-time totals. Search filters apply to the history below.</p>
     <div class="row g-3 mb-4">
 
         <div class="col-md-4">
-            <div class="summary-card bg-white">
+            <div class="summary-card">
                 <h6><i class="bi bi-arrow-down-circle me-2"></i>Total Income</h6>
                 <h3 class="income-color">
                     <?php echo $currency . number_format($total_income, 2); ?>
@@ -793,7 +794,7 @@ require_once __DIR__ . "/../includes/header.php";
                                required>
                     </div>
 
-                    <div class="col-12"><label for="spending_label" class="form-label">Spending label (optional)</label><?php $savedLabel=$edit_transaction&&fw_has_table($conn,'fw_spending_labels')?(fw_query($conn,'SELECT label FROM fw_spending_labels WHERE transaction_id=? AND user_id=?','ii',[(int)$edit_transaction['transaction_id'],$user_id])[0]['label']??''):''; ?><input id="spending_label" name="spending_label" maxlength="60" class="form-control" placeholder="Coffee, Groceries, or Meals" value="<?= htmlspecialchars($_POST['spending_label']??$savedLabel,ENT_QUOTES,'UTF-8') ?>"><p class="form-text">For expenses: Money Lab can match this exact label within the selected category. Label other food separately. For mixed purchases, record separate amounts whose sum equals the receipt total.</p></div>
+                    <div class="col-12"><label for="spending_label" class="form-label">Spending label (optional)</label><?php $savedLabel=$edit_transaction&&fw_has_table($conn,'fw_spending_labels')?(fw_query($conn,'SELECT label FROM fw_spending_labels WHERE transaction_id=? AND user_id=?','ii',[(int)$edit_transaction['transaction_id'],$user_id])[0]['label']??''):''; ?><input id="spending_label" name="spending_label" maxlength="60" class="form-control" placeholder="Coffee, Groceries, or Meals" value="<?= htmlspecialchars($_POST['spending_label']??$savedLabel,ENT_QUOTES,'UTF-8') ?>"><p class="form-text">Use a label such as Coffee to track that spending in Money Lab. Split mixed purchases into separate amounts.</p></div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Description *</label>
 
@@ -942,7 +943,7 @@ require_once __DIR__ . "/../includes/header.php";
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="fw-bold mb-0">Transaction History</h5>
             <span class="text-muted small">
-                <?php echo $filteredTotal; ?> matching record(s) · Page <?= $page ?>
+                <?php echo $filteredTotal; ?> matching record(s)
             </span>
         </div>
 
@@ -1063,9 +1064,7 @@ require_once __DIR__ . "/../includes/header.php";
         </div>
     </div>
 
-    <div class="text-center text-muted small mt-4">
-        Fundwise Personal Finance Management System
-    </div>
+    
 
 </div>
 
@@ -1103,7 +1102,7 @@ transactionType.addEventListener("change", filterCategories);
 filterCategories();
 </script>
 
-<nav class="fw-pagination" aria-label="Transaction pages"><?php $pageQuery=$_GET; unset($pageQuery['edit']); if($page>1):$pageQuery['page']=$page-1;?><a class="btn btn-outline-primary" href="?<?= htmlspecialchars(http_build_query($pageQuery),ENT_QUOTES,'UTF-8') ?>">Previous</a><?php endif;?> <span>Page <?= $page ?> · Overview totals above are all time</span><?php if($page*50<$filteredTotal):$pageQuery['page']=$page+1;?><a class="btn btn-outline-primary" href="?<?= htmlspecialchars(http_build_query($pageQuery),ENT_QUOTES,'UTF-8') ?>">Next</a><?php endif;?></nav>
+<?php if($page>1||$filteredTotal>50):?><nav class="fw-pagination" aria-label="Transaction pages"><?php $pageQuery=$_GET; unset($pageQuery['edit']); if($page>1):$pageQuery['page']=$page-1;?><a class="btn btn-outline-primary" href="?<?= htmlspecialchars(http_build_query($pageQuery),ENT_QUOTES,'UTF-8') ?>">Previous</a><?php endif;?> <span>Page <?= $page ?></span><?php if($page*50<$filteredTotal):$pageQuery['page']=$page+1;?><a class="btn btn-outline-primary" href="?<?= htmlspecialchars(http_build_query($pageQuery),ENT_QUOTES,'UTF-8') ?>">Next</a><?php endif;?></nav><?php endif;?>
 <?php require_once __DIR__ . "/../includes/footer.php"; ?>
 
 <?php

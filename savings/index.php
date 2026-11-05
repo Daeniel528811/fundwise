@@ -1237,9 +1237,7 @@ require_once __DIR__ . "/../includes/header.php";
 
     <?php endif; ?>
 
-    <div class="text-center text-muted small mt-4">
-        Fundwise Personal Finance Management System
-    </div>
+    
 
 </div>
 

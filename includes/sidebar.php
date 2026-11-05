@@ -32,7 +32,7 @@ $__navSections = [
 ?>
 <a class="fw-brand" href="<?= $__esc(BASE_URL) ?>/index.php" aria-label="Fundwise home">
     <span class="fw-brand-icon"><img src="<?= $__esc(BASE_URL) ?>/assets/fundwise-mark.png" alt="" loading="eager"></span>
-    <span><span class="fw-brand-name">Fundwise<span style="color:#33d5df">.</span></span><span class="fw-brand-tag">YOUR MONEY, SIMPLIFIED</span></span>
+    <span><span class="fw-brand-name">Fundwise</span></span>
 </a>
 <nav class="fw-nav" aria-label="Fundwise sections">
     <?php foreach ($__navSections as $__group => $__links): ?>

@@ -96,19 +96,21 @@ function fw_claim_request(mysqli $conn,int $uid,$token): bool {
 }
 function fw_budget_notifications(mysqli $conn,int $uid): void {
     $budgets=fw_query($conn,"SELECT b.*,c.category_name,COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.user_id=b.user_id AND t.category_id=b.category_id AND t.transaction_type='expense' AND t.transaction_date BETWEEN b.start_date AND LEAST(b.end_date,CURDATE())),0) AS spent FROM budgets b JOIN categories c ON c.category_id=b.category_id AND c.user_id=b.user_id WHERE b.user_id=? AND CURDATE() BETWEEN b.start_date AND b.end_date",'i',[$uid]);
+    $noticePreferences=fw_notice_preferences($conn,$uid);
     foreach($budgets as $b){
         $limit=(float)$b['budget_limit'];$spent=(float)$b['spent'];if($limit<=0||$spent<$limit*.8)continue;
         $threshold=$spent>$limit?101:($spent==$limit?100:80);
         mysqli_begin_transaction($conn);
         try {
+            fw_query($conn,'SELECT user_id FROM users WHERE user_id=? FOR UPDATE','i',[$uid]);
             $newAlert=fw_insert_once($conn,'INSERT IGNORE INTO fw_budget_alerts(user_id,budget_id,period_start,period_end,threshold_value) VALUES (?,?,?,?,?)','iissi',[$uid,(int)$b['budget_id'],$b['start_date'],$b['end_date'],$threshold]);
             if($newAlert){
                 $state=$threshold===80?'is at least 80% used':($spent>$limit?'has exceeded its limit':'has reached its limit');
                 $message=$b['category_name'].' budget '.$state.'. Recorded spending: '.number_format($spent,2).' / '.number_format($limit,2).'. Period: '.$b['start_date'].' to '.$b['end_date'].'.';
-                fw_query($conn,'INSERT INTO notifications(user_id,message,is_read) VALUES (?,?,0)','is',[$uid,$message]);
+                if(!fw_query($conn,'SELECT notification_id FROM notifications WHERE user_id=? AND message=? LIMIT 1','is',[$uid,$message]))fw_query($conn,'INSERT INTO notifications(user_id,message,is_read) VALUES (?,?,0)','is',[$uid,$message]);else $newAlert=false;
             }
             if(!mysqli_commit($conn))throw new RuntimeException('Unable to save alert.');
-            if($newAlert&&$threshold===101)$_SESSION['fw_budget_dialog'][]=$message;
+            if($newAlert&&$threshold===101&&!empty($noticePreferences['budget_popup']))$_SESSION['fw_budget_dialog'][]=$message;
         }catch(Throwable $e){mysqli_rollback($conn);throw $e;}
     }
 }

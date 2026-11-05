@@ -194,9 +194,9 @@ $pageHead = ob_get_clean();
 require_once __DIR__ . "/../includes/header.php";
 ?>
             <div class="mb-4">
-                <h2 class="section-title">Notifications</h2>
+                <h2 class="section-title">Notifications</h2><a class="btn btn-outline-primary btn-sm mt-2" href="reminders.php"><i class="bi bi-sliders" aria-hidden="true"></i> Reminders & settings</a>
                 <p class="text-muted">
-                    Stay updated with your budgets and financial activities.
+                    
                 </p>
             </div>
 

@@ -347,7 +347,7 @@ $pageHead = ob_get_clean();
 require_once __DIR__ . "/../includes/header.php";
 ?>
             <div class="mb-4">
-                <h2 class="section-title">Financial Reports</h2>
+                <h2 class="section-title">Reports</h2>
                 <p class="text-muted">
                     Review your income and expenses for a selected period.
                 </p>

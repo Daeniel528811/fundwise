@@ -472,9 +472,9 @@ require_once __DIR__ . "/includes/header.php";
 <div class="fw-dashboard">
     <section class="fw-hero" aria-label="Financial workspace">
         <div class="fw-hero-copy">
-            <div class="fw-hero-eyebrow">Your financial command center</div>
+            
             <h1>Welcome back, <?= htmlspecialchars($full_name, ENT_QUOTES, 'UTF-8') ?> <span aria-hidden="true">✦</span></h1>
-            <p>Build better money habits, stay on top of your spending, and make steady progress toward what matters.</p>
+            
             <div class="fw-hero-actions">
                 <a href="transactions/#transactionForm" class="fw-hero-btn"><i class="bi bi-plus-lg" aria-hidden="true"></i> New transaction</a>
                 <a href="reports/" class="fw-hero-btn alt"><i class="bi bi-bar-chart-line" aria-hidden="true"></i> View reports</a>
@@ -484,7 +484,7 @@ require_once __DIR__ . "/includes/header.php";
     </section>
 
     <div class="fw-section-heading">
-        <div><h2>Financial overview</h2><p>Your money at a glance, across all recorded transactions.</p></div>
+        <div><h2>Financial overview</h2><p>All-time totals</p></div>
         <span class="fw-date-pill"><i class="bi bi-calendar3" aria-hidden="true"></i><?= htmlspecialchars((new DateTimeImmutable('now', new DateTimeZone('Asia/Manila')))->format('F d, Y'), ENT_QUOTES, 'UTF-8') ?></span>
     </div>
 
@@ -502,7 +502,7 @@ require_once __DIR__ . "/includes/header.php";
         <div class="col-sm-6 col-xl-3"><div class="fw-stat focus">
             <div class="fw-stat-top"><span class="fw-stat-icon balance"><i class="bi bi-wallet2" aria-hidden="true"></i></span><span class="fw-stat-tag">Net balance</span></div>
             <div class="fw-stat-label">Recorded cash-flow balance</div><h3><?= htmlspecialchars(formatMoney($remainingBalance, $currency), ENT_QUOTES, 'UTF-8') ?></h3>
-            <p class="fw-stat-foot">Recorded income minus expenses; savings tracked separately</p>
+            <p class="fw-stat-foot"><?= $remainingBalance<0?'<span class="fw-negative-label"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> Negative cash flow</span>':'Income minus expenses' ?></p>
         </div></div>
         <div class="col-sm-6 col-xl-3"><div class="fw-stat">
             <div class="fw-stat-top"><span class="fw-stat-icon savings"><i class="bi bi-piggy-bank" aria-hidden="true"></i></span><span class="fw-stat-tag">Saved money</span></div>
@@ -511,9 +511,9 @@ require_once __DIR__ . "/includes/header.php";
         </div></div>
     </section>
 
-    <div class="fi-note mb-4"><i class="bi bi-info-circle"></i><span>Cash flow and savings are separate records, not amounts to add together. Savings deposits do not reduce recorded cash flow. This app is a tracker, not a bank balance or transfer ledger.</span></div>
+    <details class="fw-balance-help mb-4"><summary><i class="bi bi-info-circle" aria-hidden="true"></i> How cash flow and savings differ</summary><p>Cash flow is recorded income minus expenses. Savings deposits and withdrawals are tracked separately; depositing into a goal does not reduce the cash-flow figure. These totals do not represent a reconciled bank balance.</p></details>
     <div class="fw-section-heading mt-2">
-        <div><h2>Money insights</h2><p>Track how your money moves and where you plan to put it.</p></div>
+        <div><h2>Money insights</h2></div>
     </div>
     <?php require __DIR__."/includes/dashboard_budgets.php"; ?>
     <section class="row g-4 mb-4" aria-label="Financial charts and savings goals">
@@ -573,7 +573,7 @@ require_once __DIR__ . "/includes/header.php";
         </div>
     </section>
 
-    <div class="fw-section-heading fi-dashboard-heading"><div><h2>Financial intelligence</h2><p>Go beyond tracking. Explore the impact of your decisions and grow better money habits.</p></div></div>
+    <div class="fw-section-heading fi-dashboard-heading"><div><h2>Financial intelligence</h2><p></p></div></div>
     <div class="row g-3 fi-dashboard-links">
         <div class="col-md-4"><a href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/insights/purchase-map.php" class="fi-dashboard-link"><span class="fi-icon-soft"><i class="bi bi-signpost-split"></i></span><span><strong>Purchase Map</strong><small>Understand a purchase before you commit</small></span><i class="bi bi-arrow-up-right fi-link-arrow"></i></a></div>
         <div class="col-md-4"><a href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/insights/money-lab.php" class="fi-dashboard-link"><span class="fi-icon-soft"><i class="bi bi-flask"></i></span><span><strong>Money Lab</strong><small>Test new habits with real spending data</small></span><i class="bi bi-arrow-up-right fi-link-arrow"></i></a></div>

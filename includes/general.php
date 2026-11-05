@@ -21,6 +21,7 @@ function fw_work_time(array $post,?DateTimeImmutable $now=null):?array {
  return ['start'=>$a->format('Y-m-d H:i:s'),'end'=>$b->format('Y-m-d H:i:s'),'break'=>$break,'date'=>$a->format('Y-m-d'),'hours'=>round(($minutes-$break)/60,2)];
 }
 function fw_debt_due_notifications(mysqli $conn,int $uid):void {
+ if(fw_has_table($conn,'fw_notice_preferences')){fw_configured_debt_notifications($conn,$uid);return;}
  if(!fw_has_table($conn,'fw_debts'))return;
  $rows=fw_query($conn,"SELECT d.* FROM fw_debts d WHERE user_id=? AND archived=0 AND next_due<=DATE_ADD(CURDATE(),INTERVAL 3 DAY) AND opening_principal>COALESCE((SELECT SUM(p.principal) FROM fw_debt_payments p WHERE p.debt_id=d.debt_id AND p.user_id=d.user_id),0)",'i',[$uid]);
  foreach($rows as $d){$kind=$d['next_due']<date('Y-m-d')?'overdue':'upcoming';mysqli_begin_transaction($conn);try{
@@ -28,3 +29,5 @@ function fw_debt_due_notifications(mysqli $conn,int $uid):void {
   mysqli_commit($conn);
  }catch(Throwable $e){mysqli_rollback($conn);throw $e;}}
 }
+
+require_once __DIR__.'/reminders.php';

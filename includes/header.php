@@ -7,6 +7,7 @@ require_once __DIR__ . '/session.php';
 require_once __DIR__ . '/reliability.php';
 fw_budget_notifications($conn,(int)($_SESSION['user_id']??0));
 fw_debt_due_notifications($conn,(int)($_SESSION['user_id']??0));
+fw_personal_reminder_notifications($conn,(int)($_SESSION['user_id']??0));
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: ' . BASE_URL . '/auth/login.php');
@@ -66,7 +67,8 @@ $__esc = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
     <?= $pageHead ?>
     <link href="<?= $__esc(BASE_URL) ?>/css/app.css?v=reliability-20261102" rel="stylesheet">
 <link href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/reliability.css?v=20261102" rel="stylesheet">
-<link rel="stylesheet" href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/general.css?v=20261104-design1">
+<link rel="stylesheet" href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/general.css?v=20261104-polish2">
+<link rel="stylesheet" href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/refinements.css?v=20261104-polish2">
 </head>
 <body>
 <a class="fw-skip" href="#fw-content">Skip to content</a>

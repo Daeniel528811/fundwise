@@ -485,7 +485,7 @@ require_once __DIR__ . "/../includes/header.php";
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
 
         <div>
-            <h2 class="page-title mb-1">Budget Management</h2>
+            <h2 class="page-title mb-1">Budgets</h2>
             <p class="text-muted mb-0">
                 Set spending limits and keep track of your expenses.
             </p>
@@ -508,6 +508,7 @@ require_once __DIR__ . "/../includes/header.php";
     <?php endif; ?>
 
     <!-- BUDGET SUMMARY -->
+    <p class="fw-inline-note mb-3">Totals across your listed budgets. Each budget uses its own date range.</p>
 
     <div class="row g-3 mb-4">
 
@@ -886,9 +887,7 @@ require_once __DIR__ . "/../includes/header.php";
 
     </div>
 
-    <div class="text-center text-muted small mt-4">
-        Fundwise Personal Finance Management System
-    </div>
+    
 
 </div>
 

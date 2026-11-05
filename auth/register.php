@@ -86,32 +86,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <link href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/css/app.css?v=reliability-20261102" rel="stylesheet">
 <link href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/reliability.css?v=20261102" rel="stylesheet">
+<link href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/refinements.css?v=20261104-polish2" rel="stylesheet">
 </head>
 <body>
   <main class="fw-auth">
     <aside class="fw-auth-side" aria-label="About Fundwise">
       <a class="fw-auth-brand" href="login.php">
         <span class="fw-brand-icon"><img src="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/assets/fundwise-mark.png" alt=""></span>
-        <span><strong>Fundwise<span style="color:#70e4e6">.</span></strong><small>YOUR MONEY, SIMPLIFIED</small></span>
+        <span><strong>Fundwise</strong></span>
       </a>
-      <div class="fw-auth-feature">
-        <span class="fw-auth-eyebrow"><i class="bi bi-stars me-2" aria-hidden="true"></i>Start your financial journey</span>
-        <h1>A better plan for <span>what's next.</span></h1>
-        <p>One place to record transactions, build realistic budgets, and make savings progress you can see.</p>
-        <div class="fw-auth-benefits">
-          <span><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Track your money</span>
-          <span><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Set budgets</span>
-          <span><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Build savings</span>
-        </div>
-      </div>
+      <div class="fw-auth-feature"><h1>Track your money.<br><span>Plan ahead.</span></h1><p>Income, expenses, budgets, and savings in one place.</p></div>
       <div class="fw-auth-art" aria-hidden="true"><img src="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/assets/fundwise-mark.png" alt=""></div>
-      <span class="fw-auth-side-footer">FUNDWISE · PERSONAL FINANCIAL PLANNING</span>
     </aside>
     <section class="fw-auth-form-side" aria-label="Create account">
       <div class="fw-auth-form-wrap">
-        <div class="fw-auth-kicker">GET STARTED</div>
         <h2>Create your account</h2>
-        <p class="fw-auth-intro">Take the first step toward clearer money management. It only takes a minute to get started.</p>
         <?php if ($message !== ''): ?>
           <div class="alert <?= strpos($message,'Registration successful') === 0 ? 'alert-success' : 'alert-danger' ?>" role="status"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div>
         <?php endif; ?>
@@ -140,6 +129,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     </section>
   </main>
-  <script src="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/js/ui.js?v=reliability-20261102"></script>
+  <script src="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/js/ui.js?v=20261104-polish2"></script>
 </body>
 </html>

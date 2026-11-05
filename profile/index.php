@@ -114,7 +114,7 @@ $is_dark = $selected_theme === "dark";
 ?>
 
 <?php
-$pageTitle = "Profile Settings";
+$pageTitle = "Profile & Settings";
 ob_start();
 ?>
 <style>
@@ -218,7 +218,7 @@ require_once __DIR__ . "/../includes/header.php";
             <div class="mb-4">
                 <h2 class="section-title">Profile & Settings</h2>
                 <p class="muted-text">
-                    Manage your personal information and application preferences.
+                    
                 </p>
             </div>
 
@@ -340,22 +340,12 @@ require_once __DIR__ . "/../includes/header.php";
 
             </div>
 
-<section class="settings-card mt-4" id="accountSecurity"><h2 class="h5 section-title mb-3">Account security</h2>
+<section class="settings-card mt-4" id="accountSecurity"><h2 class="fw-panel-title mb-3">Account security</h2>
 <?php if($securityFlash):?><div class="alert alert-<?= $securityFlash['ok']?'success':'danger' ?>" role="status"><?= htmlspecialchars($securityFlash['text'],ENT_QUOTES,'UTF-8') ?><?php if(isset($securityFlash['code'])):?><p class="mt-2 mb-1">Save this code now. It is shown once; never share it.</p><code class="fw-recovery-code"><?= htmlspecialchars($securityFlash['code'],ENT_QUOTES,'UTF-8') ?></code><?php endif;?></div><?php endif;?>
 <form method="post" action="security.php" class="fw-security-form"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'],ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="action" value="change_password"><div class="mb-3"><label class="form-label" for="currentPassword">Current password</label><input id="currentPassword" name="current_password" type="password" class="form-control" autocomplete="current-password" required maxlength="72"></div><div class="row g-3"><div class="col-md-6"><label class="form-label" for="newPassword">New password</label><input id="newPassword" name="new_password" type="password" class="form-control" autocomplete="new-password" minlength="8" maxlength="72" required></div><div class="col-md-6"><label class="form-label" for="confirmPassword">Confirm new password</label><input id="confirmPassword" name="confirm_password" type="password" class="form-control" autocomplete="new-password" minlength="8" maxlength="72" required></div></div><p class="form-text mt-3">Use 8–72 characters. Changing your password signs out other sessions and replaces your recovery code.</p><button class="btn btn-purple" type="submit">Change password</button></form>
-<hr class="my-4"><h3 class="h6">Recovery code</h3><p class="text-muted small">Existing accounts should generate a recovery code now. It lets you reset a forgotten password without email delivery. Regenerating replaces the previous code.</p><form method="post" action="security.php"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'],ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="action" value="recovery_code"><label class="form-label" for="recoveryCurrentPassword">Confirm current password</label><input id="recoveryCurrentPassword" name="current_password" type="password" class="form-control mb-3" autocomplete="current-password" required maxlength="72"><button class="btn btn-outline-primary" type="submit">Generate recovery code</button></form><p class="form-text mt-3">Email ownership is not verified in this version. Do not treat a registered address as a verified identity.</p></section>
+<hr class="my-4"><h3 class="h6">Recovery code</h3><p class="text-muted small">Save your recovery code somewhere safe. You can use it to reset your password without email. Generating a new code replaces the old one.</p><form method="post" action="security.php"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'],ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="action" value="recovery_code"><label class="form-label" for="recoveryCurrentPassword">Confirm current password</label><input id="recoveryCurrentPassword" name="current_password" type="password" class="form-control mb-3" autocomplete="current-password" required maxlength="72"><button class="btn btn-outline-primary" type="submit">Generate recovery code</button></form><p class="form-text mt-3">Your email has not been verified. Keep your recovery code safe.</p></section>
 
-            <div class="settings-card mt-4">
-                <h5 class="section-title">Account Information</h5>
-
-                <p class="muted-text mb-1">
-                    Account ID: <?= $user_id ?>
-                </p>
-
-                <p class="muted-text mb-0">
-                    Registered Email: <?= htmlspecialchars($user["email"]) ?>
-                </p>
-            </div>
+            
 
         
 

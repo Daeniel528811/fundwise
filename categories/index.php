@@ -174,7 +174,7 @@ require_once __DIR__ . "/../includes/header.php";
 ?>
 <div class="fi-page">
     <div class="fi-hero fi-hero-categories">
-        <div><span class="fi-kicker"><i class="bi bi-grid-3x3-gap"></i> ORGANIZE YOUR MONEY</span><h1>Categories that <span>work your way.</span></h1><p>Keep your income and expenses organized with categories you create and control.</p></div>
+        <div><span class="fi-kicker"><i class="bi bi-grid-3x3-gap"></i> CATEGORIES</span><h1>Income & expense<br><span>categories.</span></h1><p>Manage the categories used in your transactions.</p></div>
         <div class="fi-hero-icon"><i class="bi bi-collection"></i></div>
     </div>
     <?php if ($message !== ''): ?><div class="alert alert-<?= htmlspecialchars($message_type, ENT_QUOTES, 'UTF-8') ?> mt-3" role="status"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
@@ -220,6 +220,6 @@ require_once __DIR__ . "/../includes/header.php";
         </section></div>
         <?php endforeach; ?>
     </div>
-    <div class="fi-footnote"><i class="bi bi-info-circle"></i> Category forms now open directly on the page: no dark overlay or blocked clicks. Your existing categories and transactions are unchanged.</div>
+    
 </div>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

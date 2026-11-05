@@ -82,7 +82,7 @@ final class FundwisePdf {
         $this->fill(self::LEFT+3,27,3,28,self::CYAN);
         $this->text(self::LEFT+16,44,'Fundwise',21,true);
         $this->text(self::LEFT+111,44,'.',21,true,self::CYAN);
-        $this->text(self::LEFT+16,57,'YOUR MONEY, SIMPLIFIED',6.8,true,self::MUTED);
+
         $this->right(self::RIGHT,36,'GENERATED',6.8,true,self::MUTED);
         $this->right(self::RIGHT,51,$this->generated,8,false,self::MUTED);
         if($first){
