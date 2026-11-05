@@ -58,4 +58,4 @@ Editable Mermaid sources are supplied with the PNGs. For the complete ERD, open 
 
 ## Interface references
 
-Local validation screenshots show the existing implementation using synthetic data. Publishing those screenshots is pending owner approval. Actual pages include shared responsive navigation, blue/navy/cyan banners, forms, summary cards, charts, clear feedback and dark/light modes. These are implementation references, not invented evidence of historical wireframe work.
+The published screenshot folder shows the existing implementation using synthetic local test data, explicitly approved for publication by the project owner. Actual pages include shared responsive navigation, blue/navy/cyan banners, forms, summary cards, charts, clear feedback and dark/light modes. These are implementation references, not invented evidence of historical wireframe work.

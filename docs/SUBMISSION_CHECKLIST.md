@@ -4,7 +4,7 @@ Repository materials are prepared from available implementation evidence. This d
 
 - [x] Project source, meaningful recovered snapshot commits and original Git history retained.
 - [x] README with description, features, stack, setup, database steps, live URL and developer.
-- [ ] Public screenshot publication: synthetic images are ready locally and await owner approval.
+- [x] Four synthetic screenshots published with explicit owner approval.
 - [x] `.gitignore`, example configuration, clean installation SQL and additive migrations.
 - [x] Architecture, use-case, flowchart and ERD sources; full database dictionary.
 - [x] Current proposal reconstruction and six-chapter technical documentation.

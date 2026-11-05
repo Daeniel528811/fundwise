@@ -83,8 +83,12 @@ Reminders are **in-app only**; due checks occur about once per minute while a pa
 
 ## Screenshots
 
-Synthetic validation screenshots are retained locally. Public screenshot publication is pending explicit owner approval; no financial screenshots are included in this commit.
+Screenshots show synthetic local test accounts, not real customer data or proof of live deployment.
 
+![Financial dashboard](docs/screenshots/dashboard.png)
+![Updated transaction page](docs/screenshots/transactions.png)
+![Money Lab spending review](docs/screenshots/money-lab.png)
+![Loan installments on mobile](docs/screenshots/loan-mobile.png)
 
 ## Documentation
 

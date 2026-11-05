@@ -37,5 +37,9 @@ php_error_log
 Thumbs.db
 Desktop.ini
 
-# Keep unapproved screenshots private until publication permission is given
-/docs/screenshots/
+# Track only the four synthetic screenshots explicitly approved for publication
+/docs/screenshots/*
+!/docs/screenshots/dashboard.png
+!/docs/screenshots/transactions.png
+!/docs/screenshots/money-lab.png
+!/docs/screenshots/loan-mobile.png

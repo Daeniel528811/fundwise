@@ -26,3 +26,7 @@ Private `includes/config.php`, receipt contents, data-bearing exports, test acco
 Earlier snapshots may contain superseded behavior and are retained for historical review. They are not deployment recommendations or security-reviewed releases. Use the final HEAD and its clean-install/migration instructions. Historical testing described elsewhere belongs to the recorded source version and date, not every intermediate recovered commit.
 
 Going forward, commit each actual change while developing, inspect staged files for sensitive content, and use focused messages. Do not fabricate old timestamps or empty commits to satisfy a count.
+
+## Approved screenshot publication
+
+On November 5, 2026, the owner explicitly approved public publication of four synthetic local test screenshots: dashboard, transactions, Money Lab and mobile loan payments. They use the seeded Alex Reyes test account and do not show private financial records, credentials or recovery codes. Only these four screenshot paths are unignored.
