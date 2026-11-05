@@ -56,3 +56,7 @@ The table below is a manual execution checklist. Expected behavior is not a clai
 
 ## Limits of evidence
 Local automated results do not establish comprehensive security, production availability, screen-reader compliance or improved financial behavior. No formal participant usability study, independent penetration test or deployed-host certification is claimed. Complete the live and accessibility checks before submission.
+
+## Update3 verification - 2026-11-05
+
+Password eyes and outlined actions passed light/dark desktop, tablet and phone checks, including keyboard focus and touch release. Five work-cost choices passed create/edit, totals, ownership and legacy preservation checks. See [results](testing/update3-results.json). No schema migration is required.

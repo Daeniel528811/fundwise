@@ -49,8 +49,9 @@ if($ready&&$_SERVER['REQUEST_METHOD']==='POST') {
     $rawKinds=array_values($rawKinds);$rawAmounts=array_values($_POST['expense_amount']??[]);
     foreach(array_values($rawDescriptions) as $i=>$description) {
         if(fw_text($description)===''&&fw_text($rawAmounts[$i])==='')continue;
-        $kind=fw_text($rawKinds[$i]??null);if(!isset($costKinds[$kind]))throw new InvalidArgumentException('Choose a valid work-expense category.');$kinds[]=$kind;
+        $kinds[]=fw_text($rawKinds[$i]??null);
     }
+    $kinds=fi_validate_expense_kinds($kinds,$before['items']??[]);
     $linkedCosts=$id?fw_query($conn,'SELECT expense_id FROM fw_work_cost_links WHERE user_id=? AND session_id=?','ii',[$fi_user_id,$id]):[];
     if($linkedCosts){$oldItems=array_map(static fn($i)=>[$i['expense_description'],number_format((float)$i['amount'],2,'.',''),$i['cost_kind']],$before['items']);$newItems=[];foreach($costs['items'] as $n=>$item)$newItems[]=[$item['description'],$item['amount'],$kinds[$n]];if($oldItems!==$newItems)throw new InvalidArgumentException('Unlink the recorded expense transactions before changing work costs. Open Manage transaction links for this session.');}
     $existing=fw_query($conn,'SELECT COALESCE(SUM(s.hours_worked),0) AS hours,COALESCE(SUM(d.extra_minutes),0) AS extra FROM work_sessions s LEFT JOIN fw_work_session_details d ON d.session_id=s.session_id AND d.user_id=s.user_id WHERE s.user_id=? AND s.session_date=? AND s.session_id<>?','isi',[$fi_user_id,$workDate,$id])[0];

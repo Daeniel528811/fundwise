@@ -90,7 +90,31 @@ function fi_purchase_result(array $input, int $balance, ?array $goal = null, ?fl
     }
     return $result;
 }
-function fi_expense_kinds(): array { return ['transport'=>'Transport / fuel','fees'=>'Platform / service fees','supplies'=>'Supplies / equipment','food'=>'Work-related food','deductions'=>'Entered deductions','other'=>'Other work cost']; }
+function fi_expense_kinds(): array {
+    return ['transport'=>'Transport & travel','supplies'=>'Supplies & equipment','workspace'=>'Workspace & digital','fees'=>'Fees & business services','other'=>'Other work costs'];
+}
+function fi_saved_expense_kinds(): array {
+    return ['food'=>'Work-related food','deductions'=>'Entered deductions'];
+}
+function fi_expense_kind_label(string $kind): string {
+    return (fi_expense_kinds()+fi_saved_expense_kinds())[$kind]??'Other work costs';
+}
+function fi_expense_options(string $selected): array {
+    $options=fi_expense_kinds();$saved=fi_saved_expense_kinds();
+    if(isset($saved[$selected]))$options[$selected]=$saved[$selected].' (saved category)';
+    return $options;
+}
+function fi_validate_expense_kinds(array $kinds,array $previousItems=[]): array {
+    $current=fi_expense_kinds();$saved=fi_saved_expense_kinds();$available=[];
+    foreach($previousItems as $item){$kind=$item['cost_kind']??'';if(is_string($kind)&&isset($saved[$kind]))$available[$kind]=($available[$kind]??0)+1;}
+    foreach($kinds as $kind){
+        if(!is_string($kind))throw new InvalidArgumentException('Choose a valid work-cost category.');
+        if(isset($current[$kind]))continue;
+        if(isset($saved[$kind])&&($available[$kind]??0)>0){$available[$kind]--;continue;}
+        throw new InvalidArgumentException('Choose one of the five work-cost categories. Older saved categories can only be retained on existing entries.');
+    }
+    return $kinds;
+}
 function fi_payment(array $details, ?array $transaction, float $gross): array {
     if (!empty($details['income_transaction_id'])) {
         if (!$transaction || $transaction['transaction_type']!=='income') return ['status'=>'Link needs review','received'=>null,'date'=>null,'linked'=>false];

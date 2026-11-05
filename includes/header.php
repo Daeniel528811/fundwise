@@ -70,8 +70,9 @@ $__esc = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
 <link rel="stylesheet" href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/general.css?v=20261104-polish2">
 <link rel="stylesheet" href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/refinements.css?v=20261104-polish2">
 <link rel="stylesheet" href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/update2.css?v=20261104-u2">
+<link rel="stylesheet" href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/controls.css?v=20261105-u3">
 </head>
-<body>
+<body class="fw-controls-v3">
 <a class="fw-skip" href="#fw-content">Skip to content</a>
 <div class="fw-shell">
     <aside class="offcanvas-lg offcanvas-start fw-sidebar" tabindex="-1" id="fwSidebar" aria-label="Main navigation">

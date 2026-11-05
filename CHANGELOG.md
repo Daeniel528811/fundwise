@@ -1,5 +1,12 @@
 # Changelog
 
+## November 5, 2026 - Update3
+
+- Center password visibility controls inside consistently sized fields across authentication and Settings.
+- Use outlined blue actions at rest and blue fill on pointer hover, keyboard focus or press, with stable dimensions and touch-aware hover behavior.
+- Offer five broad work-cost categories, retain saved food/deduction classifications without reassigning data, and clarify the role of descriptions and amounts.
+- No database migration or automatic cash posting is introduced.
+
 ## Recovered on November 5, 2026
 
 These entries summarize saved implementation versions imported into Git today. They describe functionality, not historical commit dates. See `docs/RECOVERY_HISTORY.md` for provenance and limitations.

@@ -1,6 +1,22 @@
 // UI-only enhancements shared by Fundwise pages.
 (() => {
   'use strict';
+  // Touch/pen feedback is transient; native clicks and form behavior are unchanged.
+  const pressedActions = new Set();
+  const clearPressedActions = () => {
+    pressedActions.forEach(button => button.classList.remove('fw-action-pressed'));
+    pressedActions.clear();
+  };
+  document.addEventListener('pointerdown', event => {
+    if (event.pointerType === 'mouse' || !(event.target instanceof Element)) return;
+    const button = event.target.closest('.btn-primary,.btn-purple,.btn-outline-primary,.fw-primary-btn,.fw-hero-action,.fw-hero-btn,.fw-password-btn');
+    if (!button || !button.closest('body.fw-controls-v3') || button.matches(':disabled,.disabled,[aria-disabled="true"]')) return;
+    button.classList.add('fw-action-pressed');
+    pressedActions.add(button);
+  }, {passive:true});
+  ['pointerup','pointercancel','lostpointercapture'].forEach(type => document.addEventListener(type,clearPressedActions,{passive:true}));
+  window.addEventListener('blur',clearPressedActions);
+  document.addEventListener('visibilitychange',() => { if(document.hidden) clearPressedActions(); });
   let fieldIndex = 0;
   document.querySelectorAll('label.form-label:not([for])').forEach(label => {
     if (label.querySelector('input,select,textarea')) return;

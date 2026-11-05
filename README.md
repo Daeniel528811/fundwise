@@ -19,7 +19,7 @@ The four original repository commits are retained. The missing application histo
 - Savings goals, contributions/withdrawals, saving challenges linked to goals, and allocation percentages.
 - Money Lab: compare a spending habit using a reviewed baseline and explicit category/label matching; inspect individual matching and unclassified records.
 - Purchase Map: save conditional purchase estimates using checked balances, commitments, budgets and goal trade-offs; record a follow-up decision.
-- Real Earnings Lens: itemized work costs, multiple income sources, optional work time, overnight shifts, earnings trends and reviewed links to actual transactions.
+- Real Earnings Lens: five broad work-cost categories with descriptions and preserved older classifications, itemized work costs, multiple income sources, optional work time, overnight shifts, earnings trends and reviewed links to actual transactions.
 - Debts & Loans: manual principal/interest/fee payments, monthly installment plans, partial repayments, void/correction handling and per-loan reminders.
 - Date-filtered PDF, XLSX and CSV reports; a reference currency converter.
 - Responsive navigation, persistent light/dark theme, charts and configurable in-system reminders.

@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-05",
+  "environment": "Isolated local synthetic accounts",
+  "php_syntax_files": 56,
+  "category_checks": 20,
+  "http_update3": 24,
+  "http_regression": 84,
+  "http_features": 55,
+  "browser_checks": 118,
+  "site_layout_checks": 51,
+  "javascript_exceptions": 0,
+  "limitations": "Local checks do not certify production security or accessibility."
+}
