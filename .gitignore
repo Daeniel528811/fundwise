@@ -1,1 +1,38 @@
-
+# Private installation configuration and secrets
+/includes/config.php
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+# Personal financial receipts; retain only access rules and folder marker
+/uploads/**
+!/uploads/receipts/
+!/uploads/receipts/.htaccess
+!/uploads/receipts/.gitignore
+# Backups, database exports containing data, generated packages and local previews
+/backups/
+/private/
+/tmp/
+/output/
+/database/backups/
+/database/*backup*.sql
+/database/*dump*.sql
+/reports/exports/
+*.sql.gz
+*.zip
+*.7z
+*.bak
+*.log
+error_log
+php_error_log
+# Local dependency caches and editor/OS settings
+/node_modules/
+/vendor/
+/.idea/
+/.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
