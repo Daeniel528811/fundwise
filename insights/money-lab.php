@@ -1,153 +1,123 @@
 <?php
-require_once __DIR__ . '/common.php';
-$currency = fi_currency($conn, $fi_user_id);
-$ready = fi_table_exists($conn, 'money_lab_experiments');
-$error = '';
-$flash = fi_take_flash('lab');
-
-$categories = fi_query($conn, "SELECT category_id, category_name FROM categories
-    WHERE user_id = ? AND category_type='expense' ORDER BY category_name", 'i', [$fi_user_id]);
-
-if ($ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!fi_post_csrf()) {
-        http_response_code(403);
-        $error = 'Invalid form token. Refresh the page and try again.';
-    } else {
-        $action = fw_text($_POST['action'] ?? null);
-        if ($action === 'create') {
-            $title = fw_text($_POST['experiment_title'] ?? null);
-            $category_id = fw_positive_id($_POST['category_id'] ?? null);
-            $duration = filter_var($_POST['duration'] ?? null, FILTER_VALIDATE_INT);
-            $reduction = filter_var($_POST['reduction_percent'] ?? null, FILTER_VALIDATE_INT);
-            $manual = fw_money($_POST['manual_baseline'] ?? null);
-            $category_ids = array_map(static fn($c)=>(int)$c['category_id'], $categories);
-            if ($title === '' || strlen($title) > 120 || !in_array($category_id, $category_ids, true)
-                || !in_array($duration, [7,14,30], true) || $reduction === false || $reduction < 5 || $reduction > 80) {
-                $error = 'Enter a title, your expense category, a valid duration and a reduction between 5% and 80%.';
-            } else {
-                $start = new DateTimeImmutable('today', new DateTimeZone('Asia/Manila'));
-                $end = $start->modify('+' . ($duration-1) . ' days');
-                $previousStart = $start->modify('-' . $duration . ' days');
-                $previousEnd = $start->modify('-1 day');
-                $history = fi_query($conn, "SELECT COALESCE(SUM(amount),0) AS total FROM transactions
-                    WHERE user_id=? AND category_id=? AND transaction_type='expense'
-                    AND transaction_date BETWEEN ? AND ?", 'iiss', [
-                        $fi_user_id, $category_id, $previousStart->format('Y-m-d'), $previousEnd->format('Y-m-d')]);
-                $historical = round((float)($history[0]['total'] ?? 0), 2);
-                $baseline = $historical > 0 ? $historical : $manual;
-                $source = $historical > 0 ? 'history' : 'manual';
-                if ($baseline === null || $baseline <= 0) {
-                    $error = 'No spending was found in the previous ' . $duration . ' days. Enter a positive manual baseline to start.';
-                } else {
-                    $ok = fi_exec($conn, "INSERT INTO money_lab_experiments
-                      (user_id,category_id,experiment_title,start_date,end_date,duration_days,reduction_percent,baseline_amount,baseline_source)
-                      VALUES (?,?,?,?,?,?,?,?,?)", 'iisssiids', [
-                        $fi_user_id,$category_id,$title,$start->format('Y-m-d'),$end->format('Y-m-d'),$duration,$reduction,$baseline,$source]);
-                    if ($ok) {
-                        fi_flash('lab', 'Your experiment is live! Fundwise will track matching expenses from your Transactions page.');
-                        header('Location: money-lab.php'); exit;
-                    }
-                    $error = 'Unable to save the experiment. Please try again.';
-                }
-            }
-        } elseif ($action === 'delete') {
-            $id = fw_positive_id($_POST['experiment_id'] ?? null);
-            if ($id <= 0) {
-                $error = 'Select a valid experiment.';
-            } else {
-                $ok = fi_exec($conn, 'DELETE FROM money_lab_experiments WHERE experiment_id=? AND user_id=?','ii', [$id,$fi_user_id]);
-                if ($ok) {
-                    fi_flash('lab', 'Experiment removed. Your actual transaction records were not changed.');
-                    header('Location: money-lab.php'); exit;
-                }
-                $error = 'Could not delete the experiment.';
-            }
+require_once __DIR__.'/common.php';
+$currency=fi_currency($conn,$fi_user_id);$today=date('Y-m-d');
+$ready=fi_table_exists($conn,'money_lab_experiments')&&fi_v2_ready($conn);
+$error='';$flash=fi_take_flash('lab');
+$categories=fi_query($conn,"SELECT category_id,category_name FROM categories WHERE user_id=? AND category_type='expense' ORDER BY category_name",'i',[$fi_user_id]);
+$categoryIds=array_map(static fn($c)=>(int)$c['category_id'],$categories);
+function lab_baseline(mysqli $conn,int $uid,int $category,int $duration,string $today): array {
+    $end=(new DateTimeImmutable($today))->modify('-1 day')->format('Y-m-d');
+    $start=(new DateTimeImmutable($today))->modify('-'.$duration.' days')->format('Y-m-d');
+    $row=fi_query($conn,"SELECT COALESCE(SUM(amount),0) AS total,COUNT(*) AS count FROM transactions WHERE user_id=? AND category_id=? AND transaction_type='expense' AND transaction_date BETWEEN ? AND ?",'iiss',[$uid,$category,$start,$end])[0];
+    return ['start'=>$start,'end'=>$end,'amount'=>(float)$row['total'],'count'=>(int)$row['count']];
+}
+if (isset($_GET['preview'])) {
+    header('Content-Type: application/json; charset=UTF-8');
+    $category=fw_positive_id($_GET['category_id']??null);$duration=fw_positive_id($_GET['duration']??null);
+    if (!$ready || !in_array($category,$categoryIds,true) || !in_array($duration,[7,14,30],true)) {http_response_code(400);echo json_encode(['error'=>'Choose your expense category and duration.']);exit;}
+    echo json_encode(lab_baseline($conn,$fi_user_id,$category,$duration,$today));exit;
+}
+if ($ready && $_SERVER['REQUEST_METHOD']==='POST') {
+    try {
+        if(!fi_post_csrf())throw new InvalidArgumentException('Refresh this page and submit the form again.');
+        $action=fw_text($_POST['action']??null);
+        if($action==='create') {
+            $title=fw_text($_POST['experiment_title']??null);$behavior=fw_text($_POST['behavior_plan']??null);
+            $category=fw_positive_id($_POST['category_id']??null);$duration=fw_positive_id($_POST['duration']??null);
+            $reduction=fi_require_int($_POST['reduction_percent']??null,5,80,'Reduction');
+            $mode=fw_text($_POST['baseline_mode']??null);
+            if($title===''||fw_text_length($title)>120||$behavior===''||fw_text_length($behavior)>255||!in_array($category,$categoryIds,true)||!in_array($duration,[7,14,30],true)||!in_array($mode,['history','manual'],true))throw new InvalidArgumentException('Enter a title, a specific behavior, your expense category, and a valid baseline and duration.');
+            if(!fi_checked($_POST['baseline_confirmed']??null))throw new InvalidArgumentException('Review the previous-period figures or your manual estimate and confirm that the baseline is representative.');
+            mysqli_begin_transaction($conn);
+            fw_query($conn,'SELECT user_id FROM users WHERE user_id=? FOR UPDATE','i',[$fi_user_id]);
+            $end=(new DateTimeImmutable($today))->modify('+'.($duration-1).' days')->format('Y-m-d');
+            if(fi_query($conn,'SELECT experiment_id FROM money_lab_experiments WHERE user_id=? AND category_id=? AND start_date<=? AND end_date>=? LIMIT 1','iiss',[$fi_user_id,$category,$end,$today]))throw new InvalidArgumentException('This category already has an overlapping experiment. Finish it or choose another category.');
+            $history=lab_baseline($conn,$fi_user_id,$category,$duration,$today);
+            $baseline=$mode==='history'?fi_cents($history['amount']):fi_require_money($_POST['manual_baseline']??null,'Manual baseline',false);
+            if($baseline<=0)throw new InvalidArgumentException('No positive spending total was found. Choose a representative positive manual baseline instead.');
+            fw_query($conn,'INSERT INTO money_lab_experiments(user_id,category_id,experiment_title,start_date,end_date,duration_days,reduction_percent,baseline_amount,baseline_source) VALUES (?,?,?,?,?,?,?,?,?)','iisssiiss',[$fi_user_id,$category,$title,$today,$end,$duration,$reduction,fi_amount($baseline),$mode]);
+            $id=(int)mysqli_insert_id($conn);
+            fw_query($conn,'INSERT INTO fw_lab_details(experiment_id,user_id,behavior_plan,baseline_start,baseline_end,baseline_count,baseline_confirmed) VALUES (?,?,?,?,?,?,1)','iisssi',[$id,$fi_user_id,$behavior,$history['start'],$history['end'],$mode==='history'?$history['count']:null]);
+            fw_audit($conn,$fi_user_id,'lab.created',$id);
+            if(!mysqli_commit($conn))throw new RuntimeException('Commit failed.');
+            fi_flash('lab','Experiment started. Confirm each day after you finish recording its expenses.');header('Location: money-lab.php');exit;
         }
+        $id=fw_positive_id($_POST['experiment_id']??null);
+        mysqli_begin_transaction($conn);
+        fw_query($conn,'SELECT user_id FROM users WHERE user_id=? FOR UPDATE','i',[$fi_user_id]);
+        $experiment=fi_query($conn,'SELECT * FROM money_lab_experiments WHERE experiment_id=? AND user_id=? FOR UPDATE','ii',[$id,$fi_user_id])[0]??null;
+        if(!$experiment)throw new InvalidArgumentException('That experiment is unavailable.');
+        if($action==='confirm_day') {
+            $day=fw_text($_POST['work_date']??null);$kind=fw_text($_POST['recording_kind']??null);
+            if(!fw_valid_date($day)||$day<$experiment['start_date']||$day>$experiment['end_date']||$day>$today||!in_array($kind,['recorded','no_spend'],true))throw new InvalidArgumentException('Select a day within this experiment, no later than today.');
+            $totals=fi_query($conn,"SELECT COALESCE(SUM(amount),0) AS total,COUNT(*) AS count FROM transactions WHERE user_id=? AND category_id=? AND transaction_type='expense' AND transaction_date=?",'iis',[$fi_user_id,(int)$experiment['category_id'],$day])[0];
+            if(($kind==='no_spend'&&(int)$totals['count']!==0)||($kind==='recorded'&&(int)$totals['count']===0))throw new InvalidArgumentException($kind==='no_spend'?'Expenses exist on that day. Review them and choose All expenses recorded.':'No matching expenses exist. Record them in Transactions or confirm No spending.');
+            fw_query($conn,'INSERT INTO fw_lab_days(experiment_id,user_id,work_date,recording_kind,recorded_amount,recorded_count) VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE recording_kind=VALUES(recording_kind),recorded_amount=VALUES(recorded_amount),recorded_count=VALUES(recorded_count),updated_at=CURRENT_TIMESTAMP','iisssi',[$id,$fi_user_id,$day,$kind,$totals['total'],(int)$totals['count']]);
+            fw_audit($conn,$fi_user_id,'lab.day_confirmed',$id);
+            $message='Day confirmed. Changed spending totals or record counts require confirmation again.';
+        } elseif($action==='review') {
+            $behavior=fw_text($_POST['behavior_plan']??null);$notes=fw_text($_POST['review_notes']??null);$practical=fw_text($_POST['practical_choice']??null);
+            if($behavior===''||fw_text_length($behavior)>255||fw_text_length($notes)>255||!in_array($practical,['unset','yes','adjust','no'],true))throw new InvalidArgumentException('Enter a behavior and review of up to 255 characters each.');
+            $baseStart=(new DateTimeImmutable($experiment['start_date']))->modify('-'.(int)$experiment['duration_days'].' days')->format('Y-m-d');
+            $baseEnd=(new DateTimeImmutable($experiment['start_date']))->modify('-1 day')->format('Y-m-d');
+            fw_query($conn,'INSERT INTO fw_lab_details(experiment_id,user_id,behavior_plan,baseline_start,baseline_end,baseline_confirmed,practical_choice,review_notes) VALUES (?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE behavior_plan=VALUES(behavior_plan),baseline_confirmed=VALUES(baseline_confirmed),practical_choice=VALUES(practical_choice),review_notes=VALUES(review_notes)','iisssiss',[$id,$fi_user_id,$behavior,$baseStart,$baseEnd,(int)fi_checked($_POST['baseline_confirmed']??null),$practical,$notes]);
+            fw_audit($conn,$fi_user_id,'lab.reviewed',$id);$message='Review saved. The original baseline amount is unchanged.';
+        } elseif($action==='delete') {
+            fw_query($conn,'DELETE FROM fw_lab_days WHERE experiment_id=? AND user_id=?','ii',[$id,$fi_user_id]);
+            fw_query($conn,'DELETE FROM fw_lab_details WHERE experiment_id=? AND user_id=?','ii',[$id,$fi_user_id]);
+            fw_query($conn,'DELETE FROM money_lab_experiments WHERE experiment_id=? AND user_id=?','ii',[$id,$fi_user_id]);
+            fw_audit($conn,$fi_user_id,'lab.deleted',$id);$message='Experiment removed. Transactions are unchanged.';
+        } else throw new InvalidArgumentException('Choose a valid experiment action.');
+        if(!mysqli_commit($conn))throw new RuntimeException('Commit failed.');
+        fi_flash('lab',$message);header('Location: money-lab.php?page='.max(1,fw_positive_id($_GET['page']??1)).'#experiment-'.$id);exit;
+    } catch(Throwable $e) {mysqli_rollback($conn);$error=$e instanceof InvalidArgumentException?$e->getMessage():'Unable to save this experiment. Please try again.';if(!($e instanceof InvalidArgumentException))error_log('Money Lab: '.$e->getMessage());}
+}
+$page=max(1,fw_positive_id($_GET['page']??1));$page=min($page,100000);$offset=($page-1)*20;
+$experiments=[];$stats=['total'=>0,'active'=>0,'finished'=>0,'successful'=>0];$dayTotals=[];$confirmations=[];
+if($ready) {
+    $base="SELECT e.*,c.category_name,d.behavior_plan,d.baseline_start,d.baseline_end,d.baseline_count,COALESCE(d.baseline_confirmed,0) AS baseline_confirmed,d.practical_choice,d.review_notes,
+      COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.user_id=e.user_id AND t.category_id=e.category_id AND t.transaction_type='expense' AND t.transaction_date BETWEEN e.start_date AND LEAST(e.end_date,CURDATE())),0) AS actual_spending,
+      (SELECT COUNT(*) FROM fw_lab_days r WHERE r.user_id=e.user_id AND r.experiment_id=e.experiment_id AND r.work_date BETWEEN e.start_date AND LEAST(e.end_date,CURDATE()) AND r.recorded_amount=COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.user_id=e.user_id AND t.category_id=e.category_id AND t.transaction_type='expense' AND t.transaction_date=r.work_date),0) AND r.recorded_count=(SELECT COUNT(*) FROM transactions t WHERE t.user_id=e.user_id AND t.category_id=e.category_id AND t.transaction_type='expense' AND t.transaction_date=r.work_date)) AS confirmed_days
+      FROM money_lab_experiments e JOIN categories c ON c.category_id=e.category_id AND c.user_id=e.user_id LEFT JOIN fw_lab_details d ON d.experiment_id=e.experiment_id AND d.user_id=e.user_id WHERE e.user_id=?";
+    $stats=fi_query($conn,"SELECT COUNT(*) AS total,COALESCE(SUM(end_date>=CURDATE()),0) AS active,COALESCE(SUM(end_date<CURDATE()),0) AS finished,COALESCE(SUM(end_date<CURDATE() AND baseline_confirmed=1 AND confirmed_days=duration_days AND actual_spending<=ROUND(baseline_amount*(100-reduction_percent)/100,2)),0) AS successful FROM ($base) summary",'i',[$fi_user_id])[0];
+    $experiments=fi_query($conn,$base." ORDER BY e.start_date DESC,e.experiment_id DESC LIMIT 20 OFFSET {$offset}",'i',[$fi_user_id]);
+    if($experiments) {
+        $ids=implode(',',array_map(static fn($e)=>(int)$e['experiment_id'],$experiments));
+        foreach(fi_query($conn,"SELECT e.experiment_id,t.transaction_date,SUM(t.amount) AS total,COUNT(*) AS count FROM money_lab_experiments e JOIN transactions t ON t.user_id=e.user_id AND t.category_id=e.category_id AND t.transaction_type='expense' AND t.transaction_date BETWEEN e.start_date AND LEAST(e.end_date,CURDATE()) WHERE e.user_id=? AND e.experiment_id IN ($ids) GROUP BY e.experiment_id,t.transaction_date",'i',[$fi_user_id]) as $row)$dayTotals[(int)$row['experiment_id']][$row['transaction_date']]=$row;
+        foreach(fi_query($conn,"SELECT r.* FROM fw_lab_days r JOIN money_lab_experiments e ON e.experiment_id=r.experiment_id AND e.user_id=r.user_id WHERE r.user_id=? AND r.experiment_id IN ($ids)",'i',[$fi_user_id]) as $row)$confirmations[(int)$row['experiment_id']][$row['work_date']]=$row;
     }
 }
-$page=max(1,min(100000,(int)($_GET['page']??1))); $offset=($page-1)*20;
-$experiments = [];
-if ($ready) {
-    $experiments = fi_query($conn, "
-        SELECT e.*, c.category_name,
-               COALESCE((SELECT SUM(t.amount) FROM transactions t
-                  WHERE t.user_id=e.user_id AND t.category_id=e.category_id
-                    AND t.transaction_type='expense'
-                    AND t.transaction_date BETWEEN e.start_date AND LEAST(e.end_date,CURDATE())),0) AS actual_spending
-        FROM money_lab_experiments e
-        INNER JOIN categories c ON c.category_id=e.category_id AND c.user_id=e.user_id
-        WHERE e.user_id=? ORDER BY e.start_date DESC, e.experiment_id DESC LIMIT 20 OFFSET {$offset}
-    ", 'i', [$fi_user_id]);
-}
-$today = date('Y-m-d');
-$counts=$ready?fi_query($conn,"SELECT COUNT(*) AS total, COALESCE(SUM(e.end_date>=CURDATE()),0) AS active, COALESCE(SUM(e.end_date<CURDATE()),0) AS finished, COALESCE(SUM(e.end_date<CURDATE() AND COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.user_id=e.user_id AND t.category_id=e.category_id AND t.transaction_type='expense' AND t.transaction_date BETWEEN e.start_date AND LEAST(e.end_date,CURDATE())),0)<=e.baseline_amount*(1-e.reduction_percent/100)),0) AS successful FROM money_lab_experiments e WHERE e.user_id=?",'i',[$fi_user_id])[0]:[];
-$activeCount=(int)($counts['active']??0);$finishedCount=(int)($counts['finished']??0);$successfulCount=(int)($counts['successful']??0);
-$pageTitle = 'Money Lab';
-require_once __DIR__ . '/../includes/header.php';
+$pageTitle='Money Lab';$pageHead='<link rel="stylesheet" href="'.fi_h(BASE_URL).'/css/intelligence.css?v=20261102c">';
+require __DIR__.'/../includes/header.php';
 ?>
-<div class="fi-page">
-    <div class="fi-hero fi-hero-lab">
-        <div><span class="fi-kicker"><i class="bi bi-flask"></i> FINANCIAL INTELLIGENCE / HABIT EXPERIMENTS</span>
-            <h1>Small experiments.<br><span>Smarter money habits.</span></h1>
-            <p>Turn a spending goal into a 7-, 14-, or 30-day experiment. Compare your previous spending with what you actually record during the challenge.</p></div>
-        <div class="fi-hero-icon"><i class="bi bi-flask"></i></div>
-    </div>
-    <?php if (!$ready): fi_db_notice(); endif; ?>
-    <?php if ($error !== ''): ?><div class="alert alert-danger mt-3" role="alert"><?= fi_h($error) ?></div><?php endif; ?>
-    <?php if ($flash): ?><div class="alert alert-<?= fi_h($flash['kind']) ?> mt-3" role="status"><?= fi_h($flash['text']) ?></div><?php endif; ?>
-    <div class="row g-3 my-2">
-        <div class="col-md-4"><div class="fi-stat"><span><i class="bi bi-lightning-charge"></i> Active experiments</span><strong><?= $activeCount ?></strong><small>Ongoing habit tests</small></div></div>
-        <div class="col-md-4"><div class="fi-stat"><span><i class="bi bi-check2-circle"></i> Completed experiments</span><strong><?= $finishedCount ?></strong><small>Experiments past their end date</small></div></div>
-        <div class="col-md-4"><div class="fi-stat"><span><i class="bi bi-stars"></i> Targets achieved</span><strong><?= $successfulCount ?></strong><small>Completed within the target</small></div></div>
-    </div>
-    <div class="row g-4 mt-1 fi-columns">
-        <div class="col-lg-4">
-            <section class="fi-panel fi-sticky" aria-labelledby="newExperiment">
-                <div class="fi-panel-heading"><div><span class="fi-mini-eyebrow">CREATE NEW</span><h2 id="newExperiment">Start an experiment</h2></div><span class="fi-icon-soft"><i class="bi bi-plus-lg"></i></span></div>
-                <form method="post" autocomplete="off"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
-                    <input type="hidden" name="csrf_token" value="<?= fi_h($_SESSION['csrf_token']) ?>">
-                    <input type="hidden" name="action" value="create">
-                    <div class="mb-3"><label class="form-label" for="experiment_title">Experiment title</label><input id="experiment_title" name="experiment_title" class="form-control" placeholder="e.g. Less takeout this week" maxlength="120" required value="<?= fi_h($_POST['experiment_title'] ?? '') ?>"></div>
-                    <div class="mb-3"><label class="form-label" for="category_id">Expense category</label><select id="category_id" name="category_id" class="form-select" required><option value="">Choose a category</option><?php foreach ($categories as $c): ?><option value="<?= (int)$c['category_id'] ?>" <?= (int)($_POST['category_id'] ?? 0)===(int)$c['category_id']?'selected':'' ?>><?= fi_h($c['category_name']) ?></option><?php endforeach ?></select></div>
-                    <div class="row g-2 mb-3"><div class="col-6"><label class="form-label" for="duration">Duration</label><select name="duration" id="duration" class="form-select"><option value="7">7 days</option><option value="14">14 days</option><option value="30">30 days</option></select></div><div class="col-6"><label class="form-label" for="reduction_percent">Spend less by</label><select id="reduction_percent" name="reduction_percent" class="form-select"><option value="10">10%</option><option value="20" selected>20%</option><option value="25">25%</option><option value="30">30%</option><option value="40">40%</option><option value="50">50%</option></select></div></div>
-                    <div class="mb-3"><label class="form-label" for="manual_baseline">Manual baseline (optional, <?= fi_h($currency) ?>)</label><input type="number" step="0.01" min="0.01" max="9999999999.99" id="manual_baseline" name="manual_baseline" class="form-control" placeholder="Use if no previous transactions"><div class="form-text">Fundwise uses your actual spending from the previous matching period when available. This value is only used if that total is zero.</div></div>
-                    <button type="submit" class="btn btn-primary w-100" <?= (!$ready || !$categories)?'disabled':'' ?>><i class="bi bi-flask me-2"></i> Start money experiment</button>
-                </form>
-                <div class="fi-note mt-3"><i class="bi bi-info-circle"></i><span>Starting an experiment does not modify your budget or savings balances. You still record expenses normally.</span></div>
-            </section>
-        </div>
-        <div class="col-lg-8">
-            <div class="fi-panel">
-                <div class="fi-panel-heading"><div><span class="fi-mini-eyebrow">YOUR EXPERIMENTS</span><h2>Progress & outcomes</h2></div><span class="fi-icon-soft"><i class="bi bi-graph-up-arrow"></i></span></div>
-                <?php if (!$experiments): ?>
-                    <div class="fi-empty"><i class="bi bi-flask"></i><h3>Ready for your first experiment?</h3><p>Choose an expense category and a reduction goal. Your experiments will appear here with live progress from Transactions.</p></div>
-                <?php endif; ?>
-                <?php foreach ($experiments as $e):
-                    $baseline = (float)$e['baseline_amount'];
-                    $target = round($baseline*(1-(int)$e['reduction_percent']/100),2);
-                    $actual = (float)$e['actual_spending'];
-                    $completed = $e['end_date'] < $today;
-                    $success = $completed && $actual <= $target;
-                    $daysElapsed = max(0, min((int)$e['duration_days'], (new DateTimeImmutable($e['start_date']))->diff(new DateTimeImmutable('today'))->days + 1));
-                    if ($today < $e['start_date']) $daysElapsed = 0;
-                    $paceTarget = $target * $daysElapsed / max(1, (int)$e['duration_days']);
-                    $onTrack = $actual <= $paceTarget;
-                    $status = $completed ? ($success?'Target reached':'Target missed') : ($onTrack?'On track':'Above target pace');
-                    $pill = $completed ? ($success?'success':'danger') : ($onTrack?'success':'warning');
-                    $percent = $target > 0 ? min(100, max(0, $actual/$target*100)) : ($actual>0?100:0);
-                ?>
-                <article class="fi-experiment">
-                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2"><div><span class="fi-mini-eyebrow"><?= fi_h($e['category_name']) ?> · <?= (int)$e['duration_days'] ?> DAYS · <?= (int)$e['reduction_percent'] ?>% REDUCTION</span><h3><?= fi_h($e['experiment_title']) ?></h3><small class="text-muted"><?= fi_h(date('M j',strtotime($e['start_date']))) ?> – <?= fi_h(date('M j, Y',strtotime($e['end_date']))) ?> · <?= $e['baseline_source']==='manual'?'Manual baseline':'Previous-period baseline' ?></small></div><span class="fi-pill fi-pill-<?= $pill ?>"><?= fi_h($status) ?></span></div>
-                    <div class="fi-exp-numbers"><span>Previously: <strong><?= fi_h(fi_cash($baseline,$currency)) ?></strong></span><span>Target: <strong><?= fi_h(fi_cash($target,$currency)) ?></strong></span><span>Actual: <strong><?= fi_h(fi_cash($actual,$currency)) ?></strong></span></div>
-                    <div class="fi-meter"><span style="width:<?= round($percent,1) ?>%" class="<?= $percent>=100?'fi-meter-full':'' ?>"></span></div>
-                    <div class="d-flex justify-content-between align-items-center gap-2 mt-2 flex-wrap"><span class="fi-subtext"><?= $completed ? ($success?'Spent '.fi_h(fi_cash($target-$actual,$currency)).' less than your target.':'Spent '.fi_h(fi_cash($actual-$target,$currency)).' over your target.') : 'Target pace so far: '.fi_h(fi_cash($paceTarget,$currency)).' · Day '.$daysElapsed.' of '.(int)$e['duration_days'] ?></span><form method="post" onsubmit="return confirm('Remove this experiment? Actual transactions will not be deleted.');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="csrf_token" value="<?= fi_h($_SESSION['csrf_token']) ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="experiment_id" value="<?= (int)$e['experiment_id'] ?>"><button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash3 me-1"></i> Remove</button></form></div>
-                </article>
-                <?php endforeach; ?>
-                <div class="fi-note mt-3"><i class="bi bi-shield-check"></i><span>Spending below a target is not automatically saved money. Your Savings Goals balance only changes when you record a contribution.</span></div>
-            </div>
-        </div>
-    </div>
-</div>
-<nav class="fw-pagination" aria-label="Experiment history pages"><?php if($page>1):?><a class="btn btn-outline-primary" href="?page=<?= $page-1 ?>">Previous</a><?php endif;?> <span>Page <?= $page ?></span> <?php if($page*20<(int)($counts['total']??0)):?><a class="btn btn-outline-primary" href="?page=<?= $page+1 ?>">Next</a><?php endif;?></nav>
-<div class="fi-note mt-3">Results are comparisons, not proof that an experiment caused a change. Missing records or edits to past transactions can change outcomes. The baseline is kept from the start of the experiment.</div>
-<?php require_once __DIR__ . '/../includes/footer.php'; ?>
+<div class="fi-page fi-v2">
+ <div class="fi-hero fi-hero-lab"><div><span class="fi-kicker"><i class="bi bi-flask"></i> FINANCIAL INTELLIGENCE / HABIT EXPERIMENTS</span><h1>Small experiments.<br><span>Clearer spending decisions.</span></h1><p>Try a specific spending habit, compare it with a reviewed baseline, and confirm the days you have fully recorded.</p></div><div class="fi-hero-icon"><i class="bi bi-flask"></i></div></div>
+ <?php if(!$ready):fi_v2_notice();endif;if($error!==''):?><div class="alert alert-danger mt-3" role="alert"><?= fi_h($error) ?></div><?php endif;if($flash):?><div class="alert alert-<?= fi_h($flash['kind']) ?> mt-3" role="status"><?= fi_h($flash['text']) ?></div><?php endif;?>
+ <div class="row g-3 my-2"><?php foreach([['Active experiments',$stats['active'],'Your current habit tests'],['Completed experiments',$stats['finished'],'Past their end date'],['Confirmed targets reached',$stats['successful'],'Baseline reviewed · every day self-confirmed']] as [$label,$value,$hint]):?><div class="col-md-4"><div class="fi-stat"><span><?= fi_h($label) ?></span><strong><?= (int)$value ?></strong><small><?= fi_h($hint) ?></small></div></div><?php endforeach;?></div>
+ <div class="row g-4 mt-1 fi-columns"><div class="col-lg-4"><section class="fi-panel" aria-labelledby="newExperiment"><div class="fi-panel-heading"><div><span class="fi-mini-eyebrow">BUILD A HABIT</span><h2 id="newExperiment">Start an experiment</h2></div><span class="fi-icon-soft"><i class="bi bi-plus-lg"></i></span></div>
+ <form method="post" id="labCreate"><input type="hidden" name="fw_request_token" value="<?= fi_h(fw_request_token()) ?>"><input type="hidden" name="csrf_token" value="<?= fi_h($_SESSION['csrf_token']) ?>"><input type="hidden" name="action" value="create">
+ <div class="mb-3"><label for="experiment_title" class="form-label">Experiment name</label><input id="experiment_title" name="experiment_title" class="form-control" maxlength="120" required placeholder="Less takeout this week" value="<?= fi_h($_POST['experiment_title']??'') ?>"></div>
+ <div class="mb-3"><label for="behavior_plan" class="form-label">What will you do differently?</label><textarea id="behavior_plan" name="behavior_plan" class="form-control" rows="2" maxlength="255" required placeholder="Bring lunch from home on three workdays."><?= fi_h($_POST['behavior_plan']??'') ?></textarea></div>
+ <div class="mb-3"><label for="category_id" class="form-label">Expense category</label><select id="category_id" name="category_id" class="form-select" required><option value="">Choose a category</option><?php foreach($categories as $c):?><option value="<?= (int)$c['category_id'] ?>" <?= fw_positive_id($_POST['category_id']??null)===(int)$c['category_id']?'selected':'' ?>><?= fi_h($c['category_name']) ?></option><?php endforeach;?></select></div>
+ <div class="fi-form-grid mb-3"><div><label for="duration" class="form-label">Duration</label><select id="duration" name="duration" class="form-select"><?php foreach([7,14,30] as $n):?><option value="<?= $n ?>" <?= fw_positive_id($_POST['duration']??7)===$n?'selected':'' ?>><?= $n ?> days</option><?php endforeach;?></select></div><div><label for="reduction_percent" class="form-label">Spend less by (%)</label><input id="reduction_percent" name="reduction_percent" type="number" min="5" max="80" step="1" class="form-control" required value="<?= fi_h($_POST['reduction_percent']??20) ?>"></div></div>
+ <div id="baselinePreview" class="fi-note fi-baseline-preview" role="status">Choose a category to review the previous matching period.</div>
+ <div class="mb-3"><label for="baseline_mode" class="form-label">Baseline to use</label><select id="baseline_mode" name="baseline_mode" class="form-select"><option value="history" <?= ($_POST['baseline_mode']??'')==='manual'?'':'selected' ?>>Previous-period transactions</option><option value="manual" <?= ($_POST['baseline_mode']??'')==='manual'?'selected':'' ?>>My representative estimate</option></select></div>
+ <div id="manualBaselineWrap" class="mb-3"><label for="manual_baseline" class="form-label">Manual baseline (<?= fi_h($currency) ?>)</label><input id="manual_baseline" name="manual_baseline" type="number" min="0.01" max="9999999999.99" step="0.01" class="form-control" value="<?= fi_h($_POST['manual_baseline']??'') ?>"><div class="form-text">A total for the entire matching period. This is an estimate, even when confirmed.</div></div>
+ <label class="fi-check"><input type="checkbox" name="baseline_confirmed" value="1" required><span>I reviewed the baseline and consider it representative. I understand that recorded transactions alone do not prove a complete period.</span></label>
+ <button class="btn btn-primary w-100" type="submit" <?= !$ready||!$categories?'disabled':'' ?>><i class="bi bi-flask me-2"></i>Start experiment</button></form>
+ <div class="fi-note mt-3"><i class="bi bi-info-circle"></i><span>Keep recording expenses in Transactions. Lower spending is not automatically a savings contribution.</span></div></section></div>
+ <div class="col-lg-8"><section class="fi-panel" aria-labelledby="experimentHistory"><div class="fi-panel-heading"><div><span class="fi-mini-eyebrow">PROGRESS & REFLECTION</span><h2 id="experimentHistory">Your experiments</h2></div><span class="fi-icon-soft"><i class="bi bi-graph-up-arrow"></i></span></div>
+ <?php if(!$experiments):?><div class="fi-empty"><i class="bi bi-flask"></i><h3>Try one useful change</h3><p>Start with a category you regularly track. Missing records will never be treated as a confirmed success.</p></div><?php endif;?>
+ <?php foreach($experiments as $e):$id=(int)$e['experiment_id'];$r=fi_lab_result($e,$today);$baseStart=$e['baseline_start']??(new DateTimeImmutable($e['start_date']))->modify('-'.(int)$e['duration_days'].' days')->format('Y-m-d');$baseEnd=$e['baseline_end']??(new DateTimeImmutable($e['start_date']))->modify('-1 day')->format('Y-m-d');$days=[];$defaultDay='';for($i=0;$i<$r['elapsed'];$i++){$date=(new DateTimeImmutable($e['start_date']))->modify('+'.$i.' days')->format('Y-m-d');$t=$dayTotals[$id][$date]??['total'=>0,'count'=>0];$c=$confirmations[$id][$date]??null;$valid=$c&&fi_cents($c['recorded_amount'])===fi_cents($t['total'])&&(int)$c['recorded_count']===(int)$t['count'];$days[]=['date'=>$date,'total'=>$t['total'],'count'=>$t['count'],'valid'=>$valid];if(!$valid&&$defaultDay==='')$defaultDay=$date;}if($defaultDay===''&&$days)$defaultDay=$days[count($days)-1]['date'];?>
+ <article class="fi-experiment" id="experiment-<?= $id ?>"><div class="fi-inline-title"><div><span class="fi-mini-eyebrow"><?= fi_h($e['category_name']) ?> · <?= (int)$e['duration_days'] ?> DAYS</span><h3><?= fi_h($e['experiment_title']) ?></h3></div><span class="fi-pill fi-pill-<?= fi_h($r['kind']) ?>"><?= fi_h($r['status']) ?></span></div>
+ <p class="fi-subtext"><?= fi_h($e['start_date']) ?> to <?= fi_h($e['end_date']) ?> · <?= (int)$e['reduction_percent'] ?>% reduction goal</p><p class="fi-wrap"><?= fi_h($e['behavior_plan']?:'Add the specific behavior you want to try in the review below.') ?></p>
+ <dl class="fi-data-list"><div><dt>Baseline</dt><dd><?= fi_h(fi_cash($e['baseline_amount'],$currency)) ?></dd></div><div><dt>Spending limit</dt><dd><?= fi_h(fi_cash($r['target']/100,$currency)) ?></dd></div><div><dt>Recorded spending</dt><dd><?= fi_h(fi_cash($r['actual']/100,$currency)) ?></dd></div><div><dt>Recorded change from baseline</dt><dd><?= fi_h(fi_cash(abs($r['difference'])/100,$currency)) ?> <?= $r['difference']>=0?'lower':'higher' ?></dd></div></dl>
+ <div class="fi-meter"><span style="width:<?= min(100,$r['target']>0?round($r['actual']/$r['target']*100,1):0) ?>%"></span></div><div class="fi-mini-metrics"><span><?= (int)$e['confirmed_days'] ?> / <?= $r['elapsed'] ?> elapsed days confirmed</span><span><?= !empty($e['baseline_confirmed'])?'Baseline reviewed':'Baseline needs review' ?></span></div>
+ <p class="fi-subtext">Baseline period: <?= fi_h($baseStart) ?> to <?= fi_h($baseEnd) ?> · <?= $e['baseline_source']==='manual'?'Manual estimate':($e['baseline_count']===null?'Legacy snapshot; original record count unavailable':(int)$e['baseline_count'].' recorded transactions at start') ?>. <?= $r['complete']?'Full-period comparison.':'Experiment in progress; final change is not known yet.' ?></p>
+ <?php if($days):?><details class="fi-disclosure"><summary>Confirm a day’s records</summary><form method="post"><input type="hidden" name="fw_request_token" value="<?= fi_h(fw_request_token()) ?>"><input type="hidden" name="csrf_token" value="<?= fi_h($_SESSION['csrf_token']) ?>"><input type="hidden" name="action" value="confirm_day"><input type="hidden" name="experiment_id" value="<?= $id ?>"><label class="form-label" for="labDay<?= $id ?>">Day and current recorded total</label><select id="labDay<?= $id ?>" name="work_date" class="form-select mb-3"><?php foreach($days as $day):?><option value="<?= fi_h($day['date']) ?>" <?= $day['date']===$defaultDay?'selected':'' ?>><?= fi_h($day['date'].' · '.fi_cash($day['total'],$currency).' · '.$day['count'].' records · '.($day['valid']?'Confirmed':'Needs confirmation')) ?></option><?php endforeach;?></select><label class="form-label" for="labKind<?= $id ?>">Your confirmation</label><select id="labKind<?= $id ?>" name="recording_kind" class="form-select mb-3"><option value="recorded">All expenses for this category are recorded</option><option value="no_spend">I had no spending in this category</option></select><p class="form-text">Self-confirmation is your statement, not independent verification. Reconfirm if amounts or the number of transactions change.</p><button class="btn btn-outline-primary btn-sm" type="submit">Confirm day</button></form></details><?php endif;?>
+ <details class="fi-disclosure"><summary>Review baseline & habit</summary><form method="post"><input type="hidden" name="fw_request_token" value="<?= fi_h(fw_request_token()) ?>"><input type="hidden" name="csrf_token" value="<?= fi_h($_SESSION['csrf_token']) ?>"><input type="hidden" name="action" value="review"><input type="hidden" name="experiment_id" value="<?= $id ?>"><label class="form-label" for="labBehavior<?= $id ?>">Specific behavior</label><textarea id="labBehavior<?= $id ?>" name="behavior_plan" class="form-control mb-3" maxlength="255" required><?= fi_h($e['behavior_plan']??'') ?></textarea><label class="fi-check"><input type="checkbox" name="baseline_confirmed" value="1" <?= !empty($e['baseline_confirmed'])?'checked':'' ?>><span>I reviewed this baseline and consider it representative. Manual estimates remain estimates.</span></label><label class="form-label" for="labPractical<?= $id ?>">Could you keep this habit?</label><select id="labPractical<?= $id ?>" name="practical_choice" class="form-select mb-3"><?php foreach(['unset'=>'Not reviewed yet','yes'=>'Yes, it is practical','adjust'=>'It needs adjustment','no'=>'No, it is not practical'] as $key=>$label):?><option value="<?= $key ?>" <?= ($e['practical_choice']??'unset')===$key?'selected':'' ?>><?= fi_h($label) ?></option><?php endforeach;?></select><label class="form-label" for="labNotes<?= $id ?>">What affected the result?</label><textarea id="labNotes<?= $id ?>" name="review_notes" class="form-control mb-3" maxlength="255" rows="2" placeholder="Irregular bills, missing receipts, a change in routine…"><?= fi_h($e['review_notes']??'') ?></textarea><button class="btn btn-outline-primary btn-sm" type="submit">Save review</button></form></details>
+ <div class="fi-form-actions mt-3"><a class="fi-section-link" href="<?= fi_h(BASE_URL) ?>/transactions/">Review Transactions <i class="bi bi-arrow-up-right"></i></a><form method="post" onsubmit="return confirm('Remove this experiment and its confirmations? Transactions are kept.');"><input type="hidden" name="fw_request_token" value="<?= fi_h(fw_request_token()) ?>"><input type="hidden" name="csrf_token" value="<?= fi_h($_SESSION['csrf_token']) ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="experiment_id" value="<?= $id ?>"><button type="submit" class="btn btn-outline-danger btn-sm" aria-label="Remove <?= fi_h($e['experiment_title']) ?>"><i class="bi bi-trash3"></i></button></form></div></article>
+ <?php endforeach;?><nav class="fw-pagination" aria-label="Experiment history pages"><?php if($page>1):?><a class="btn btn-outline-primary btn-sm" href="?page=<?= $page-1 ?>">Previous</a><?php endif;?><span>Page <?= $page ?></span><?php if($page*20<(int)$stats['total']):?><a class="btn btn-outline-primary btn-sm" href="?page=<?= $page+1 ?>">Next</a><?php endif;?></nav></section></div></div>
+ <div class="fi-note mt-4"><i class="bi bi-info-circle"></i><span>Rule-based comparison, not proof that a habit caused a change. Results depend on your records and confirmations. Overlapping tests for the same category are prevented. Figures use your account’s ledger currency: <?= fi_h($currency) ?>.</span></div>
+</div><script type="application/json" id="labData"><?= json_encode(['currency'=>$currency,'ready'=>$ready],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?></script><script src="<?= fi_h(BASE_URL) ?>/js/money-lab.js?v=20261102c"></script>
+<?php require __DIR__.'/../includes/footer.php'; ?>

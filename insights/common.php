@@ -78,3 +78,5 @@ function fi_month($raw): string {
 function fi_db_notice(): void {
     echo '<div class="alert alert-warning mt-4"><strong>One-time setup needed.</strong> Import <code>database/financial_intelligence.sql</code> and <code>database/20261102_upgrade.sql</code> into your existing InfinityFree database using phpMyAdmin, then refresh. This only adds two tables; it does not change your current records.</div>';
 }
+
+require_once __DIR__ . '/../includes/fi_tools.php';

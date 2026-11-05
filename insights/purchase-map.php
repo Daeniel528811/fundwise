@@ -1,124 +1,69 @@
 <?php
-require_once __DIR__ . '/common.php';
-$currency = fi_currency($conn, $fi_user_id);
-
-$summary = fi_query($conn, "
-    SELECT
-        COALESCE(SUM(CASE WHEN transaction_type='income' THEN amount ELSE 0 END),0) AS income,
-        COALESCE(SUM(CASE WHEN transaction_type='expense' THEN amount ELSE 0 END),0) AS expenses
-    FROM transactions WHERE user_id = ? AND transaction_date <= CURDATE()
-", 'i', [$fi_user_id]);
-$income = (float)($summary[0]['income'] ?? 0);
-$expenses = (float)($summary[0]['expenses'] ?? 0);
-$remaining = $income - $expenses;
-
-$goals = fi_query($conn, "
-    SELECT sg.goal_id, sg.goal_name, sg.target_amount,
-           COALESCE(SUM(CASE WHEN sc.contribution_type = 'deposit' THEN sc.amount
-                WHEN sc.contribution_type = 'withdrawal' THEN -sc.amount ELSE 0 END),0) AS saved
-    FROM savings_goals sg LEFT JOIN savings_contributions sc ON sc.goal_id=sg.goal_id
-    WHERE sg.user_id = ? AND NOT EXISTS (SELECT 1 FROM fw_goal_archives a WHERE a.goal_id=sg.goal_id AND a.user_id=sg.user_id)
-    GROUP BY sg.goal_id, sg.goal_name, sg.target_amount
-    ORDER BY sg.goal_name
-", 'i', [$fi_user_id]);
-
-$today = date('Y-m-d');
-$budgets = fi_query($conn, "
-    SELECT b.budget_id, b.budget_limit, b.start_date, b.end_date,
-           c.category_name,
-           COALESCE((SELECT SUM(t.amount) FROM transactions t
-                WHERE t.user_id=b.user_id AND t.category_id=b.category_id
-                AND t.transaction_type='expense'
-                AND t.transaction_date BETWEEN b.start_date AND LEAST(b.end_date,CURDATE())),0) AS spent
-    FROM budgets b INNER JOIN categories c ON c.category_id=b.category_id AND c.user_id=b.user_id
-    WHERE b.user_id=? AND c.category_type='expense' AND ? BETWEEN b.start_date AND b.end_date
-    ORDER BY c.category_name
-", 'is', [$fi_user_id, $today]);
-$jsData = ['currency'=>$currency, 'remaining'=>$remaining,
-    'goals'=>array_map(static fn($g)=>[
-        'id'=>(int)$g['goal_id'], 'name'=>$g['goal_name'], 'target'=>(float)$g['target_amount'],
-        'saved'=>(float)$g['saved']], $goals),
-    'budgets'=>array_map(static fn($b)=>[
-        'id'=>(int)$b['budget_id'], 'name'=>$b['category_name'], 'limit'=>(float)$b['budget_limit'],
-        'spent'=>(float)$b['spent']], $budgets)];
-
-$pageTitle = 'Purchase Consequence Map';
-require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__.'/common.php';
+$currency=fi_currency($conn,$fi_user_id);$today=date('Y-m-d');$ready=fi_v2_ready($conn);$error='';$flash=fi_take_flash('map');
+$summary=fi_query($conn,"SELECT COALESCE(SUM(CASE WHEN transaction_type='income' THEN amount ELSE -amount END),0) AS balance FROM transactions WHERE user_id=? AND transaction_date<=?",'is',[$fi_user_id,$today])[0];
+$balance=fi_cents($summary['balance']);
+$goals=fi_query($conn,"SELECT sg.goal_id,sg.goal_name,sg.target_amount,COALESCE(SUM(CASE WHEN sc.contribution_date<=CURDATE() AND sc.contribution_type='deposit' THEN sc.amount WHEN sc.contribution_date<=CURDATE() AND sc.contribution_type='withdrawal' THEN -sc.amount ELSE 0 END),0) AS saved FROM savings_goals sg LEFT JOIN savings_contributions sc ON sc.goal_id=sg.goal_id WHERE sg.user_id=? AND NOT EXISTS(SELECT 1 FROM fw_goal_archives a WHERE a.goal_id=sg.goal_id AND a.user_id=sg.user_id) GROUP BY sg.goal_id,sg.goal_name,sg.target_amount ORDER BY sg.goal_name",'i',[$fi_user_id]);
+$budgets=fi_query($conn,"SELECT b.budget_id,b.budget_limit,b.start_date,b.end_date,c.category_name,COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.user_id=b.user_id AND t.category_id=b.category_id AND t.transaction_type='expense' AND t.transaction_date BETWEEN b.start_date AND LEAST(b.end_date,CURDATE())),0) AS spent FROM budgets b JOIN categories c ON c.category_id=b.category_id AND c.user_id=b.user_id WHERE b.user_id=? AND c.category_type='expense' AND b.end_date>=CURDATE() ORDER BY b.start_date,c.category_name LIMIT 200",'i',[$fi_user_id]);
+$workRate=null;$workCount=0;
+if($ready&&fi_table_exists($conn,'work_sessions')){$work=fi_query($conn,'SELECT COUNT(*) AS count,COALESCE(SUM(s.gross_earnings-s.work_expenses),0) AS net,COALESCE(SUM(s.hours_worked),0)+COALESCE(SUM(d.extra_minutes),0)/60 AS hours FROM work_sessions s LEFT JOIN fw_work_session_details d ON d.session_id=s.session_id AND d.user_id=s.user_id WHERE s.user_id=? AND s.session_date BETWEEN DATE_SUB(CURDATE(),INTERVAL 89 DAY) AND CURDATE()','i',[$fi_user_id])[0];$workCount=(int)$work['count'];if((float)$work['hours']>0&&(float)$work['net']>0)$workRate=(float)$work['net']/(float)$work['hours'];}
+if($ready&&$_SERVER['REQUEST_METHOD']==='POST'){
+ try{
+    if(!fi_post_csrf())throw new InvalidArgumentException('Refresh this page and submit again.');
+    $action=fw_text($_POST['action']??null);
+    if($action==='save_scenario'){
+        $input=fi_purchase_inputs($_POST,$today);$goal=null;$sourceBalance=$balance;$sourceLabel='Recorded cash-flow balance';$budgetResult=null;
+        if($input['source']==='manual'){$sourceBalance=$input['manual'];$sourceLabel='Manually checked current balance';}
+        elseif($input['source']==='goal'){
+            foreach($goals as $g)if((int)$g['goal_id']===$input['goal_id']){$goal=['target'=>$g['target_amount']];$sourceBalance=fi_cents($g['saved']);$sourceLabel='Savings goal: '.$g['goal_name'];break;}
+            if(!$goal)throw new InvalidArgumentException('Choose one of your active savings goals.');
+        }
+        if($input['budget_id']>0){foreach($budgets as $b)if((int)$b['budget_id']===$input['budget_id']){$budgetResult=$b;break;}if(!$budgetResult||$input['date']<$budgetResult['start_date']||$input['date']>$budgetResult['end_date'])throw new InvalidArgumentException('Choose your budget that covers the planned purchase date, or select No budget comparison.');}
+        $result=fi_purchase_result($input,$sourceBalance,$goal,$workRate,$budgetResult?['limit'=>fi_cents($budgetResult['budget_limit']),'spent'=>fi_cents($budgetResult['spent'])]:null);$result['source_label']=$sourceLabel;$result['as_of']=$today;$result['work_sessions']=$workCount;
+        $result['budget_after']=$budgetResult?fi_cents($budgetResult['budget_limit'])-fi_cents($budgetResult['spent'])-$input['amount']:null;
+        $result['budget_label']=$budgetResult?$budgetResult['category_name'].' · '.$budgetResult['start_date'].' to '.$budgetResult['end_date']:null;
+        $result['goal_target']=$goal?fi_cents($goal['target']):null;
+        mysqli_begin_transaction($conn);
+        fw_query($conn,'INSERT INTO fw_purchase_scenarios(user_id,purchase_title,purchase_date,currency_code,expected_amount,inputs_json,result_json) VALUES (?,?,?,?,?,?,?)','issssss',[$fi_user_id,$input['title'],$input['date'],$currency,fi_amount($input['amount']),json_encode($input,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),json_encode($result,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)]);
+        fw_audit($conn,$fi_user_id,'purchase.scenario_saved',(int)mysqli_insert_id($conn));
+        if(!mysqli_commit($conn))throw new RuntimeException('Commit failed.');
+        fi_flash('map','Scenario saved as a dated estimate. Balances and Transactions were not changed.');header('Location: purchase-map.php#scenarioHistory');exit;
+    }elseif($action==='review_scenario'){
+        $id=fw_positive_id($_POST['scenario_id']??null);$outcome=fw_text($_POST['outcome']??null);$actualRaw=fw_text($_POST['actual_amount']??null);
+        if(!in_array($outcome,['considering','bought','deferred','skipped'],true))throw new InvalidArgumentException('Choose a valid decision.');
+        $actual=$outcome==='bought'&&$actualRaw!==''?fi_amount(fi_require_money($actualRaw,'Actual purchase price')):null;
+        mysqli_begin_transaction($conn);$before=fw_query($conn,'SELECT * FROM fw_purchase_scenarios WHERE scenario_id=? AND user_id=? FOR UPDATE','ii',[$id,$fi_user_id])[0]??null;if(!$before)throw new InvalidArgumentException('That scenario is unavailable.');
+        fw_query($conn,'UPDATE fw_purchase_scenarios SET outcome=?,actual_amount=? WHERE scenario_id=? AND user_id=?','ssii',[$outcome,$actual,$id,$fi_user_id]);
+        fw_revision($conn,$fi_user_id,'purchase_scenario',$id,'reviewed',['outcome'=>$before['outcome'],'actual_amount'=>$before['actual_amount']],['outcome'=>$outcome,'actual_amount'=>$actual]);
+        if(!mysqli_commit($conn))throw new RuntimeException('Commit failed.');fi_flash('map','Decision saved. Record an actual purchase separately in Transactions.');header('Location: purchase-map.php#scenario-'.$id);exit;
+    }else throw new InvalidArgumentException('Choose a valid scenario action.');
+ }catch(Throwable $e){mysqli_rollback($conn);$error=$e instanceof InvalidArgumentException?$e->getMessage():'Unable to save this scenario. Please try again.';if(!($e instanceof InvalidArgumentException))error_log('Purchase Map: '.$e->getMessage());}
+}
+$form=$_SERVER['REQUEST_METHOD']==='POST'&&fw_text($_POST['action']??null)==='save_scenario'?$_POST:[];
+$obligationNames=is_array($form['obligation_name']??null)?array_slice(array_values($form['obligation_name']),0,20):[''];$obligationAmounts=is_array($form['obligation_amount']??null)?array_slice(array_values($form['obligation_amount']),0,20):[''];$obligationDates=is_array($form['obligation_date']??null)?array_slice(array_values($form['obligation_date']),0,20):[''];
+$page=max(1,min(100000,fw_positive_id($_GET['page']??1)));$offset=($page-1)*20;$scenarios=[];$scenarioCount=0;
+if($ready){$scenarioCount=(int)fi_query($conn,'SELECT COUNT(*) AS count FROM fw_purchase_scenarios WHERE user_id=?','i',[$fi_user_id])[0]['count'];$scenarios=fi_query($conn,"SELECT * FROM fw_purchase_scenarios WHERE user_id=? ORDER BY scenario_id DESC LIMIT 20 OFFSET {$offset}",'i',[$fi_user_id]);}
+$jsData=['currency'=>$currency,'ready'=>$ready,'today'=>$today,'maxDate'=>(new DateTimeImmutable($today))->modify('+366 days')->format('Y-m-d'),'balance'=>$balance,'hourly'=>$workRate,'workCount'=>$workCount,'goals'=>array_map(static fn($g)=>['id'=>(int)$g['goal_id'],'name'=>$g['goal_name'],'target'=>fi_cents($g['target_amount']),'saved'=>fi_cents($g['saved'])],$goals),'budgets'=>array_map(static fn($b)=>['id'=>(int)$b['budget_id'],'name'=>$b['category_name'],'start'=>$b['start_date'],'end'=>$b['end_date'],'limit'=>fi_cents($b['budget_limit']),'spent'=>fi_cents($b['spent'])],$budgets)];
+$pageTitle='Purchase Consequence Map';$pageHead='<link rel="stylesheet" href="'.fi_h(BASE_URL).'/css/intelligence.css?v=20261102c">';require __DIR__.'/../includes/header.php';
+function fi_commitment_row($name,$amount,$date):void { ?><div class="fi-commitment-row"><label>Commitment<input class="form-control" name="obligation_name[]" maxlength="100" value="<?= fi_h($name) ?>" placeholder="e.g. Rent"></label><label>Amount<input class="form-control" name="obligation_amount[]" type="number" min="0.01" max="9999999999.99" step="0.01" value="<?= fi_h($amount) ?>" placeholder="0.00"></label><label>Due date<input class="form-control" name="obligation_date[]" type="date" value="<?= fi_h($date) ?>"></label><button type="button" class="btn btn-outline-danger fi-remove-commitment" aria-label="Remove commitment"><i class="bi bi-x-lg"></i></button></div><?php }
 ?>
-<div class="fi-page">
-  <div class="fi-hero fi-hero-map">
-    <div>
-      <span class="fi-kicker"><i class="bi bi-git-branch"></i> FINANCIAL INTELLIGENCE / DECISION SIMULATOR</span>
-      <h1>See the impact <span>before you spend.</span></h1>
-      <p>Test a planned purchase against your recorded balance, active category budget, or savings goal. Nothing here changes your real records.</p>
-    </div>
-    <div class="fi-hero-icon"><i class="bi bi-signpost-split"></i></div>
-  </div>
-  <div class="row g-4 fi-columns">
-    <div class="col-lg-5">
-      <section class="fi-panel h-100" aria-labelledby="mapSetup">
-        <div class="fi-panel-heading"><div><span class="fi-mini-eyebrow">01 / SETUP</span><h2 id="mapSetup">Planned purchase</h2></div><span class="fi-icon-soft"><i class="bi bi-bag-check"></i></span></div>
-        <div class="mb-3"><label class="form-label" for="purchaseTitle">What are you planning to buy?</label><input id="purchaseTitle" class="form-control" value="New headphones" maxlength="80" placeholder="e.g. New headphones"></div>
-        <div class="mb-3"><label class="form-label" for="purchaseAmount">Expected price (<?= fi_h($currency) ?>)</label><input id="purchaseAmount" class="form-control" type="number" value="2500" min="0" max="9999999999.99" step="0.01" inputmode="decimal"></div>
-        <div class="mb-3"><label class="form-label" for="purchaseSource">Where will the money come from?</label><select id="purchaseSource" class="form-select"><option value="balance">Recorded cash-flow balance</option><option value="goal" <?= count($goals) ? '' : 'disabled' ?>>Existing savings goal</option></select></div>
-        <div class="mb-3 d-none" id="mapGoalWrap"><label class="form-label" for="mapGoal">Savings goal</label><select id="mapGoal" class="form-select"><?php foreach ($goals as $g): ?><option value="<?= (int)$g['goal_id'] ?>"><?= fi_h($g['goal_name']) ?></option><?php endforeach ?></select><div class="form-text">Goal savings are tracked separately from income minus expenses.</div></div>
-        <div class="mb-3 d-none" id="mapMonthlyWrap"><label class="form-label" for="monthlySave">Planned monthly goal contribution (<?= fi_h($currency) ?>)</label><input id="monthlySave" type="number" min="0" step="0.01" class="form-control" value="1000"><div class="form-text">For estimated goal completion delay only.</div></div>
-        <div class="mb-3"><label class="form-label" for="mapBudget">Which budget category would this purchase affect?</label><select id="mapBudget" class="form-select"><option value="">No active category budget</option><?php foreach ($budgets as $b): ?><option value="<?= (int)$b['budget_id'] ?>"><?= fi_h($b['category_name']) ?></option><?php endforeach ?></select></div>
-        <div class="fi-note"><i class="bi bi-shield-lock"></i><span>Simulation only. You must record an actual transaction separately if you make the purchase.</span></div>
-      </section>
-    </div>
-    <div class="col-lg-7">
-      <div class="fi-panel h-100">
-        <div class="fi-panel-heading"><div><span class="fi-mini-eyebrow">02 / PROJECTION</span><h2>Consequence preview</h2></div><span class="fi-status" id="mapStatus">Ready to explore</span></div>
-        <div class="fi-projection-grid">
-          <div class="fi-projection-card"><span>Current selected balance</span><strong id="mapBefore">—</strong><small>Before the hypothetical purchase</small></div>
-          <div class="fi-projection-card fi-projection-primary"><span>Projected selected balance</span><strong id="mapAfter">—</strong><small id="mapDelta">If you make this purchase</small></div>
-        </div>
-        <div class="fi-divider"></div>
-        <div class="fi-impact" id="mapBudgetResult"><span class="fi-impact-icon"><i class="bi bi-pie-chart"></i></span><div><strong>Budget impact</strong><p>Choose an active budget to see how the purchase may affect its remaining allowance.</p></div></div>
-        <div class="fi-impact" id="mapGoalResult"><span class="fi-impact-icon"><i class="bi bi-bullseye"></i></span><div><strong>Savings impact</strong><p>Choose a savings goal as the source to explore its projected timeline.</p></div></div>
-        <div class="fi-insight" role="status" aria-live="polite"><i class="bi bi-lightbulb"></i><span id="mapInsight">Adjust the price and funding source to explore possible outcomes.</span></div>
-      </div>
-    </div>
-  </div>
-  <div class="fi-footnote"><i class="bi bi-info-circle"></i> These are estimates based on your saved Fundwise records. Values use your preferred currency code as a label; this tool does not convert transaction amounts.</div>
-</div>
-<script type="application/json" id="fiMapData"><?= json_encode($jsData, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_INVALID_UTF8_SUBSTITUTE) ?></script>
-<script>
-(() => {
-  const sourceData = JSON.parse(document.getElementById('fiMapData').textContent);
-  const el = id => document.getElementById(id);
-  const money = n => sourceData.currency + ' ' + Number(n).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const safeNumber = v => { const n=Number(v);return Number.isFinite(n)?Math.max(0,Math.min(9999999999.99,n)):0; };
-  const setText=(id,txt)=>{el(id).textContent=txt};
-  function render(){
-    const amount=safeNumber(el('purchaseAmount').value), useGoal=el('purchaseSource').value==='goal';
-    el('mapGoalWrap').classList.toggle('d-none',!useGoal);
-    el('mapMonthlyWrap').classList.toggle('d-none',!useGoal);
-    const goal=sourceData.goals.find(g=>String(g.id)===el('mapGoal').value);
-    const budget=sourceData.budgets.find(b=>String(b.id)===el('mapBudget').value);
-    const current=useGoal?(goal?.saved??0):sourceData.remaining;
-    const after=current-amount;
-    setText('mapBefore',money(current)); setText('mapAfter',money(after));
-    el('mapAfter').classList.toggle('text-danger',after<0);
-    setText('mapDelta',amount>0?'Change: −'+money(amount):'No purchase amount entered');
-    setText('mapStatus',after<0?'Not enough in selected source':'Simulation only');
-    const budgetBox=el('mapBudgetResult').querySelector('p');
-    if (budget){const available=budget.limit-budget.spent;
-      budgetBox.textContent=budget.name+': '+money(available)+' available today. After this hypothetical expense: '+money(available-amount)+(available-amount<0?' (over the budget limit).':'.');
-    }else budgetBox.textContent='Select an active category budget above to preview its remaining allowance.';
-    const goalBox=el('mapGoalResult').querySelector('p');
-    if (useGoal&&goal){
-      const rate=safeNumber(el('monthlySave').value);const oldLeft=Math.max(0,goal.target-goal.saved);const newLeft=Math.max(0,goal.target-(goal.saved-amount));
-      const delay=rate>0?Math.ceil(newLeft/rate)-Math.ceil(oldLeft/rate):null;
-      goalBox.textContent=goal.name+': saved '+money(goal.saved)+', projected '+money(goal.saved-amount)+'. '+(rate>0?'Estimated goal delay: '+delay+' month(s) at '+money(rate)+'/month.':'Enter a positive monthly contribution to estimate completion delay.');
-    }else goalBox.textContent='Savings records are unchanged when you choose remaining income balance as the funding source.';
-    const purchase=(el('purchaseTitle').value.trim()||'This purchase');
-    setText('mapInsight',after<0?purchase+' would exceed the chosen funding balance by '+money(-after)+'. Consider reducing its cost or changing your plan.':budget&&budget.limit-budget.spent-amount<0?purchase+' fits the selected funding source, but would exceed the chosen category budget.':purchase+' would leave '+money(after)+' in the selected funding source. Compare the trade-off before deciding.');
-  }
-  ['purchaseTitle','purchaseAmount','purchaseSource','mapGoal','monthlySave','mapBudget'].forEach(id=>{
-    el(id).addEventListener('input',render);el(id).addEventListener('change',render);
-  }); render();
-})();
-</script>
-<?php require_once __DIR__ . '/../includes/footer.php'; ?>
+<div class="fi-page fi-v2"><div class="fi-hero fi-hero-map"><div><span class="fi-kicker">FINANCIAL INTELLIGENCE / DECISION SIMULATOR</span><h1>Look beyond<br><span>the price tag.</span></h1><p>Check a purchase against your funding source, known commitments, protected funds, category budget, and savings trade-offs.</p></div><div class="fi-hero-icon"><i class="bi bi-signpost-split"></i></div></div>
+ <?php if(!$ready):fi_v2_notice();endif;if($error!==''):?><div class="alert alert-danger mt-3" role="alert"><?= fi_h($error) ?></div><?php endif;if($flash):?><div class="alert alert-<?= fi_h($flash['kind']) ?> mt-3" role="status"><?= fi_h($flash['text']) ?></div><?php endif;?>
+ <div class="row g-4 fi-columns"><div class="col-lg-6"><section class="fi-panel" aria-labelledby="mapSetup"><div class="fi-panel-heading"><div><span class="fi-mini-eyebrow">01 / YOUR PLAN</span><h2 id="mapSetup">Planned purchase</h2></div><span class="fi-icon-soft"><i class="bi bi-bag-check"></i></span></div><form method="post" id="purchaseForm"><input type="hidden" name="fw_request_token" value="<?= fi_h(fw_request_token()) ?>"><input type="hidden" name="csrf_token" value="<?= fi_h($_SESSION['csrf_token']) ?>"><input type="hidden" name="action" value="save_scenario">
+ <div class="fi-form-grid"><div class="fi-full"><label class="form-label" for="purchaseTitle">What are you considering?</label><input id="purchaseTitle" name="purchase_title" class="form-control" maxlength="80" required value="<?= fi_h($form['purchase_title']??'') ?>" placeholder="e.g. New headphones"></div><div><label class="form-label" for="purchaseAmount">Expected price (<?= fi_h($currency) ?>)</label><input id="purchaseAmount" name="purchase_amount" type="number" min="0.01" max="9999999999.99" step="0.01" class="form-control" required value="<?= fi_h($form['purchase_amount']??'') ?>"></div><div><label class="form-label" for="purchaseDate">Purchase date</label><input id="purchaseDate" name="purchase_date" type="date" min="<?= fi_h($today) ?>" max="<?= fi_h($jsData['maxDate']) ?>" class="form-control" required value="<?= fi_h($form['purchase_date']??$today) ?>"></div><div class="fi-full"><label class="form-label" for="purchaseSource">Funding source</label><select id="purchaseSource" name="purchase_source" class="form-select"><?php foreach(['recorded'=>'Recorded income minus expenses','manual'=>'My checked current cash balance','goal'=>'An existing savings goal'] as $key=>$label):?><option value="<?= $key ?>" <?= ($form['purchase_source']??'recorded')===$key?'selected':'' ?> <?= $key==='goal'&&!$goals?'disabled':'' ?>><?= fi_h($label) ?></option><?php endforeach;?></select><div class="form-text">Recorded cash flow may differ from actual cash: opening balances, transfers, and savings earmarks are not automatically reconciled.</div></div><div class="fi-full" id="manualBalanceWrap"><label class="form-label" for="manualBalance">Checked balance before deductions below</label><input id="manualBalance" name="manual_balance" type="number" min="0" max="9999999999.99" step="0.01" class="form-control" value="<?= fi_h($form['manual_balance']??'') ?>"></div><div class="fi-full" id="mapGoalWrap"><label class="form-label" for="mapGoal">Savings goal</label><select id="mapGoal" name="goal_id" class="form-select"><?php foreach($goals as $g):?><option value="<?= (int)$g['goal_id'] ?>" <?= fw_positive_id($form['goal_id']??null)===(int)$g['goal_id']?'selected':'' ?>><?= fi_h($g['goal_name']) ?></option><?php endforeach;?></select></div><div class="fi-full"><label class="form-label" for="reviewDate">Check commitments through</label><input id="reviewDate" name="review_date" type="date" min="<?= fi_h($today) ?>" max="<?= fi_h($jsData['maxDate']) ?>" class="form-control" required value="<?= fi_h($form['review_date']??(new DateTimeImmutable($today))->modify('+30 days')->format('Y-m-d')) ?>"><div class="form-text">For example, your next income date. Include obligations due that day. Future income is not added to this estimate.</div></div></div>
+ <fieldset class="mt-3"><legend class="form-label">Known commitments from this funding source</legend><p class="form-text">List obligations not yet paid and still included in the starting balance. If a commitment was already deducted from that balance, leave it out here.</p><div id="commitmentItems"><?php foreach($obligationNames as $i=>$name)fi_commitment_row($name,$obligationAmounts[$i]??'',$obligationDates[$i]??'');?></div><button class="btn btn-outline-primary btn-sm mt-2" id="addCommitment" type="button"><i class="bi bi-plus-lg"></i> Add commitment</button></fieldset>
+ <div class="mt-3"><label for="reserveAmount" class="form-label">Other protected funds (<?= fi_h($currency) ?>)</label><input id="reserveAmount" name="reserve_amount" type="number" min="0" max="9999999999.99" step="0.01" class="form-control" value="<?= fi_h($form['reserve_amount']??'0') ?>" required><div class="form-text">Other earmarked funds included in the starting balance. Exclude commitments above and any amount already deducted. Savings-goal balances are not automatically added to or subtracted from cash flow.</div></div>
+ <label class="fi-check"><input id="balanceChecked" name="balance_checked" type="checkbox" value="1" <?= fi_checked($form['balance_checked']??null)?'checked':'' ?>><span>I checked that the selected balance is available in this source today.</span></label><label class="fi-check"><input id="commitmentsChecked" name="commitments_checked" type="checkbox" value="1" <?= fi_checked($form['commitments_checked']??null)?'checked':'' ?>><span>I included known commitments and reserves through the review date, counting each amount once.</span></label>
+ <details class="fi-disclosure"><summary>Budget, savings timeline & alternatives</summary><div><label class="form-label" for="mapBudget">Category budget to compare</label><select id="mapBudget" name="budget_id" class="form-select mb-3"><option value="">No budget comparison</option><?php foreach($budgets as $b):?><option value="<?= (int)$b['budget_id'] ?>" <?= fw_positive_id($form['budget_id']??null)===(int)$b['budget_id']?'selected':'' ?>><?= fi_h($b['category_name'].' · '.$b['start_date'].' to '.$b['end_date']) ?></option><?php endforeach;?></select><div id="mapMonthlyWrap"><label for="monthlySave" class="form-label">Assumed monthly goal contribution</label><input id="monthlySave" name="monthly_save" type="number" min="0" max="9999999999.99" step="0.01" class="form-control mb-3" value="<?= fi_h($form['monthly_save']??'0') ?>"></div><div class="fi-form-grid"><div><label class="form-label" for="cheaperAmount">Cheaper alternative price</label><input id="cheaperAmount" name="cheaper_amount" type="number" min="0.01" max="9999999999.99" step="0.01" class="form-control" value="<?= fi_h($form['cheaper_amount']??'') ?>"></div><div><label class="form-label" for="waitDate">Or reconsider on</label><input id="waitDate" name="wait_date" type="date" class="form-control" max="<?= fi_h($jsData['maxDate']) ?>" value="<?= fi_h($form['wait_date']??'') ?>"></div></div></div></details>
+ <button class="btn btn-primary mt-3" type="submit" id="saveScenario" <?= $ready?'':'disabled' ?>><i class="bi bi-bookmark-plus me-2"></i>Save this estimate</button></form></section></div>
+ <div class="col-lg-6"><section class="fi-panel" aria-labelledby="mapPreview"><div class="fi-panel-heading"><div><span class="fi-mini-eyebrow">02 / CONSEQUENCE PREVIEW</span><h2 id="mapPreview">Room after commitments</h2></div></div><span class="fi-pill fi-pill-warning" id="mapStatus" role="status">Enter a purchase to begin</span><p class="fi-error mt-3" id="mapError" role="alert"></p>
+ <div class="fi-projection-grid mt-3"><div class="fi-projection-card"><span>Available after entered commitments</span><strong id="mapBefore">—</strong><small>Before the hypothetical purchase</small></div><div class="fi-projection-card fi-projection-primary"><span>Remaining after purchase</span><strong id="mapAfter">—</strong><small>Based on this source and your entered plan</small></div></div><dl class="fi-data-list"><div><dt>Selected funding balance</dt><dd id="mapFunding">—</dd></div><div><dt>Less entered commitments</dt><dd id="mapCommitted">—</dd></div><div><dt>Less other protected funds</dt><dd id="mapReserve">—</dd></div><div><dt>Less purchase price</dt><dd id="mapPrice">—</dd></div></dl>
+ <div class="fi-insight" aria-live="polite"><i class="bi bi-lightbulb"></i><span id="mapInsight">Use a checked balance and include known commitments to make this estimate more useful.</span></div><div class="fi-impact"><span class="fi-impact-icon"><i class="bi bi-pie-chart"></i></span><div><strong>Budget impact</strong><p id="mapBudgetResult">Select a budget to compare its remaining allowance. Budget allowances are not additional money.</p></div></div><div class="fi-impact"><span class="fi-impact-icon"><i class="bi bi-bullseye"></i></span><div><strong>Savings trade-off</strong><p id="mapGoalResult">Choose a savings goal as the source to compare the amount to replace and its assumed timeline.</p></div></div><div class="fi-impact"><span class="fi-impact-icon"><i class="bi bi-clock"></i></span><div><strong>Equivalent recorded work time</strong><p id="mapWorkResult">A positive effective hourly rate from recent work logs is needed for this comparison.</p></div></div>
+ <div class="fi-alternatives"><article class="fi-alternative"><h3>Planned purchase</h3><strong id="compareOriginal">—</strong><p>Remaining after the entered commitments.</p></article><article class="fi-alternative"><h3>Cheaper option</h3><strong id="compareCheaper">—</strong><p id="compareCheaperNote">Enter an alternative price to compare.</p></article><article class="fi-alternative"><h3>Wait & review</h3><strong id="compareWait">Choose a date</strong><p>Waiting does not guarantee more money. Recheck balances, prices, and commitments on that date.</p></article></div>
+ <div class="fi-note mt-3"><i class="bi bi-shield-check"></i><span>Conditional estimate, not an affordability guarantee. No predicted income, interest, exchange conversion, or new records are added. A future purchase uses today’s balance and may change before that date.</span></div></section></div></div>
+ <section class="fi-panel mt-4" id="scenarioHistory" aria-labelledby="scenarioHeading"><div class="fi-panel-heading"><div><span class="fi-mini-eyebrow">DECISIONS & FOLLOW-UP</span><h2 id="scenarioHeading">Your saved estimates</h2></div><span class="fi-tag"><?= $scenarioCount ?> saved</span></div><?php if(!$scenarios):?><div class="fi-empty"><h3>Keep a decision you can review</h3><p>Save an estimate, then note whether you bought, deferred, or skipped the purchase. Estimates never change your account balances.</p></div><?php endif;?>
+ <?php foreach($scenarios as $scenario):$savedInput=json_decode($scenario['inputs_json'],true);$savedResult=json_decode($scenario['result_json'],true);if(!is_array($savedInput)||!is_array($savedResult))continue;$code=$scenario['currency_code'];$sid=(int)$scenario['scenario_id'];?><article class="fi-scenario" id="scenario-<?= $sid ?>"><div class="fi-inline-title"><div><h3><?= fi_h($scenario['purchase_title']) ?></h3><p class="fi-subtext">Planned <?= fi_h($scenario['purchase_date']) ?> · Estimate as of <?= fi_h($savedResult['as_of']) ?> · <?= fi_h($savedResult['source_label']) ?></p></div><span class="fi-pill fi-pill-<?= fi_h($savedResult['kind']??($savedResult['after']<0?'danger':($savedResult['assessed']?'success':'warning'))) ?>"><?= fi_h($savedResult['status']) ?></span></div><div class="fi-summary-strip"><span>Expected price <strong><?= fi_h(fi_cash($scenario['expected_amount'],$code)) ?></strong></span><span>Estimated remaining <strong><?= fi_h(fi_cash($savedResult['after']/100,$code)) ?></strong></span><?php if($scenario['actual_amount']!==null):?><span>Actual price <strong><?= fi_h(fi_cash($scenario['actual_amount'],$code)) ?></strong> · <?= fi_h(fi_cash(abs(fi_cents($scenario['actual_amount'])-fi_cents($scenario['expected_amount']))/100,$code)) ?> <?= (float)$scenario['actual_amount']<=(float)$scenario['expected_amount']?'below':'above' ?> estimate</span><?php endif;?></div>
+ <details class="fi-disclosure"><summary>View the original assumptions</summary><dl class="fi-data-list"><div><dt>Starting source balance</dt><dd><?= fi_h(fi_cash($savedResult['balance']/100,$code)) ?></dd></div><div><dt>Commitments through <?= fi_h($savedInput['horizon']) ?></dt><dd><?= fi_h(fi_cash($savedResult['committed']/100,$code)) ?></dd></div><div><dt>Other protected funds</dt><dd><?= fi_h(fi_cash($savedResult['reserve']/100,$code)) ?></dd></div><?php foreach($savedInput['obligations'] as $item):?><div><dt><?= fi_h($item['name'].' · '.$item['date']) ?></dt><dd><?= fi_h(fi_cash($item['amount']/100,$code)) ?></dd></div><?php endforeach;?></dl><p class="form-text"><?= $savedResult['assessed']?'Balance and commitments were self-confirmed.':'Balance or commitments were not fully confirmed.' ?> This snapshot is kept even when current records change.</p></details>
+ <details class="fi-disclosure"><summary>Update decision: <?= fi_h(['considering'=>'Considering','bought'=>'Bought','deferred'=>'Deferred','skipped'=>'Skipped'][$scenario['outcome']]??$scenario['outcome']) ?></summary><form method="post"><input type="hidden" name="fw_request_token" value="<?= fi_h(fw_request_token()) ?>"><input type="hidden" name="csrf_token" value="<?= fi_h($_SESSION['csrf_token']) ?>"><input type="hidden" name="action" value="review_scenario"><input type="hidden" name="scenario_id" value="<?= $sid ?>"><div class="fi-form-grid"><div><label for="outcome<?= $sid ?>" class="form-label">Your decision</label><select id="outcome<?= $sid ?>" name="outcome" class="form-select"><?php foreach(['considering'=>'Considering','bought'=>'Bought','deferred'=>'Deferred','skipped'=>'Skipped'] as $value=>$label):?><option value="<?= $value ?>" <?= $scenario['outcome']===$value?'selected':'' ?>><?= $label ?></option><?php endforeach;?></select></div><div><label for="actual<?= $sid ?>" class="form-label">Actual price if bought (optional)</label><input id="actual<?= $sid ?>" name="actual_amount" type="number" min="0" max="9999999999.99" step="0.01" class="form-control" value="<?= fi_h($scenario['actual_amount']??'') ?>"></div></div><button class="btn btn-outline-primary btn-sm mt-3" type="submit">Save decision</button><p class="form-text">This note does not record an expense. <a href="<?= fi_h(BASE_URL) ?>/transactions/">Record or review it in Transactions</a>.</p></form></details></article><?php endforeach;?><nav class="fw-pagination" aria-label="Saved estimate pages"><?php if($page>1):?><a class="btn btn-outline-primary btn-sm" href="?page=<?= $page-1 ?>#scenarioHistory">Previous</a><?php endif;?><span>Page <?= $page ?></span><?php if($page*20<$scenarioCount):?><a class="btn btn-outline-primary btn-sm" href="?page=<?= $page+1 ?>#scenarioHistory">Next</a><?php endif;?></nav></section><div class="fi-note mt-4"><i class="bi bi-info-circle"></i><span>All amounts use your account’s ledger currency, <?= fi_h($currency) ?>. Currency Converter provides separate reference conversions; it does not relabel these records.</span></div>
+</div><template id="commitmentTemplate"><?php fi_commitment_row('','','');?></template><script type="application/json" id="fiMapData"><?= json_encode($jsData,JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_INVALID_UTF8_SUBSTITUTE) ?></script><script type="module" src="<?= fi_h(BASE_URL) ?>/js/purchase-map.js?v=20261102c"></script>
+<?php require __DIR__.'/../includes/footer.php'; ?>
