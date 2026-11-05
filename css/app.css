@@ -543,3 +543,28 @@ html[data-bs-theme] body > .modal .modal-title{color:var(--fw-heading);font-weig
 .fw-dashboard .fi-dashboard-link strong{display:block;color:var(--fw-heading);font-weight:800;font-size:13px}
 .fw-dashboard .fi-dashboard-link small{display:block;color:var(--fw-muted);font-size:11px;margin-top:5px;line-height:1.5}
 .fw-dashboard .fi-dashboard-link .fi-link-arrow{color:var(--fw-accent)}
+
+/* Responsive repair: preserve the original Fundwise design. */
+@media (max-width: 991.98px) {
+  html[data-bs-theme] .fw-sidebar.offcanvas-lg {
+    position: fixed !important;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 285px;
+    max-width: 88vw;
+    height: 100vh;
+    height: 100dvh;
+  }
+  .fw-sidebar .offcanvas-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .fw-body { width: 100%; min-width: 0; }
+  .fw-hero-copy { min-width: 0; }
+  .fw-crumb { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+@media (max-width: 360px) {
+  .fw-topbar-profile { display: none !important; }
+}
