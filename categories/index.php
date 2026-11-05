@@ -182,7 +182,7 @@ require_once __DIR__ . "/../includes/header.php";
     <details class="fi-panel fi-details mt-4" id="addCategoryPanel" <?= $message_type==='danger' && !$edit_category?'open':'' ?>>
         <summary class="fi-details-summary"><span><i class="bi bi-plus-circle me-2"></i> Add a new category</span><i class="bi bi-chevron-down"></i></summary>
         <div class="fi-divider"></div>
-        <form method="post" class="row g-3 align-items-end">
+        <form method="post" class="row g-3 align-items-end"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
             <div class="col-md-6"><label class="form-label" for="newCategoryName">Category name</label><input id="newCategoryName" type="text" name="category_name" maxlength="100" class="form-control" placeholder="e.g. Transportation" required></div>
             <div class="col-md-3"><label class="form-label" for="newCategoryType">Category type</label><select id="newCategoryType" name="category_type" class="form-select" required><option value="expense">Expense</option><option value="income">Income</option></select></div>
@@ -193,7 +193,7 @@ require_once __DIR__ . "/../includes/header.php";
     <?php if ($edit_category): ?>
     <section class="fi-panel mt-3" id="editCategoryPanel" aria-labelledby="editCategoryTitle">
         <div class="fi-panel-heading"><div><span class="fi-mini-eyebrow">EDIT CATEGORY</span><h2 id="editCategoryTitle"><?= htmlspecialchars($edit_category['category_name'], ENT_QUOTES, 'UTF-8') ?></h2></div><a class="btn btn-sm btn-outline-secondary" href="index.php">Cancel</a></div>
-        <form method="post" class="row g-3 align-items-end">
+        <form method="post" class="row g-3 align-items-end"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
             <input type="hidden" name="category_id" value="<?= (int)$edit_category['category_id'] ?>">
             <div class="col-md-6"><label class="form-label" for="editCategoryName">Category name</label><input id="editCategoryName" type="text" name="category_name" maxlength="100" class="form-control" value="<?= htmlspecialchars($edit_category['category_name'], ENT_QUOTES, 'UTF-8') ?>" required></div>
@@ -212,7 +212,7 @@ require_once __DIR__ . "/../includes/header.php";
                 <div class="fi-category-icon"><i class="bi <?= $icon ?>"></i></div>
                 <div class="fi-category-name"><strong><?= htmlspecialchars($category['category_name'], ENT_QUOTES, 'UTF-8') ?></strong><span><?= $category['is_default']?'Default category':'Custom category' ?></span></div>
                 <div class="fi-category-actions"><a class="btn btn-sm btn-outline-primary" href="?edit=<?= (int)$category['category_id'] ?>#editCategoryPanel"><i class="bi bi-pencil me-1"></i> Edit</a>
-                    <form method="post" onsubmit="return confirm('Delete this category? Categories in use by transactions, budgets, or Money Lab cannot be deleted.');">
+                    <form method="post" onsubmit="return confirm('Delete this category? Categories in use by transactions, budgets, or Money Lab cannot be deleted.');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="category_id" value="<?= (int)$category['category_id'] ?>"><button type="submit" name="delete_category" value="1" class="btn btn-sm btn-outline-danger" aria-label="Delete <?= htmlspecialchars($category['category_name'], ENT_QUOTES, 'UTF-8') ?>"><i class="bi bi-trash3"></i></button>
                     </form></div>
             </div>

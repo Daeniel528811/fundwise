@@ -157,94 +157,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
     }
 
-    // DELETE SAVINGS GOAL AND ITS CONTRIBUTION HISTORY
-    if ($action === "delete_goal") {
-
-        $goal_id = fw_positive_id($_POST["goal_id"] ?? null);
-
-        mysqli_begin_transaction($conn);
-
-        try {
-
-            // Delete contributions belonging to this user's goal
-            $delete_contributions_sql = "
-                DELETE sc
-                FROM savings_contributions sc
-                INNER JOIN savings_goals sg
-                    ON sc.goal_id = sg.goal_id
-                WHERE sg.goal_id = ?
-                AND sg.user_id = ?
-            ";
-
-            $delete_contributions_stmt = mysqli_prepare(
-                $conn,
-                $delete_contributions_sql
-            );
-
-            mysqli_stmt_bind_param(
-                $delete_contributions_stmt,
-                "ii",
-                $goal_id,
-                $user_id
-            );
-
-            if (!mysqli_stmt_execute($delete_contributions_stmt)) {
-                throw new Exception("Unable to delete contribution history.");
-            }
-
-            mysqli_stmt_close($delete_contributions_stmt);
-
-            // Delete the goal
-            $delete_goal_sql = "
-                DELETE FROM savings_goals
-                WHERE goal_id = ?
-                AND user_id = ?
-            ";
-
-            $delete_goal_stmt = mysqli_prepare($conn, $delete_goal_sql);
-
-            mysqli_stmt_bind_param(
-                $delete_goal_stmt,
-                "ii",
-                $goal_id,
-                $user_id
-            );
-
-            if (!mysqli_stmt_execute($delete_goal_stmt)) {
-                throw new Exception("Unable to delete savings goal.");
-            }
-
-            $deleted = mysqli_stmt_affected_rows($delete_goal_stmt);
-
-            mysqli_stmt_close($delete_goal_stmt);
-
-            if ($deleted > 0) {
-
-                mysqli_commit($conn);
-
-                $_SESSION["savings_message"] =
-                    "Savings goal and its contribution history were deleted.";
-
-                $_SESSION["savings_message_type"] = "success";
-
-            } else {
-
-                mysqli_rollback($conn);
-
-                $_SESSION["savings_message"] = "Savings goal not found.";
-                $_SESSION["savings_message_type"] = "danger";
-            }
-
-            header("Location: index.php");
-            exit();
-
-        } catch (Throwable $e) {
-
-            mysqli_rollback($conn);
-
-            $message = "Unable to delete the savings goal. Please try again.";
-            $message_type = "danger";
-        }
+    // Archive instead of destroying financial history. Restore is available below.
+    if(in_array($action,['delete_goal','restore_goal'],true)){
+        $goal_id=fw_positive_id($_POST['goal_id']??null);
+        if(fw_query($conn,'SELECT goal_id FROM savings_goals WHERE goal_id=? AND user_id=?','ii',[$goal_id,$user_id])){
+            if($action==='restore_goal')fw_query($conn,'DELETE FROM fw_goal_archives WHERE goal_id=? AND user_id=?','ii',[$goal_id,$user_id]);
+            else fw_query($conn,'INSERT IGNORE INTO fw_goal_archives(goal_id,user_id) VALUES (?,?)','ii',[$goal_id,$user_id]);
+            fw_audit($conn,$user_id,$action==='restore_goal'?'goal.restored':'goal.archived',$goal_id);
+            $_SESSION['savings_message']=$action==='restore_goal'?'Goal restored.':'Goal archived. Its money and contribution history are preserved.';
+        }else $_SESSION['savings_message']='Goal not found.';
+        header('Location: index.php');exit;
     }
 
     // ADD SAVINGS CONTRIBUTION OR WITHDRAWAL
@@ -378,9 +300,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     throw new Exception("Unable to save the contribution.");
                 }
 
+                $contributionId=(int)mysqli_stmt_insert_id($insert_stmt);
+                fw_revision($conn,$user_id,'savings_contribution',$contributionId,'created',null,['goal_id'=>$goal_id,'type'=>$contribution_type,'amount'=>number_format($amount,2,'.',''),'date'=>$contribution_date,'notes'=>$notes]);
                 mysqli_stmt_close($insert_stmt);
-
-                mysqli_commit($conn);
+                if(!mysqli_commit($conn))throw new RuntimeException('Unable to finish contribution.');
 
                 $_SESSION["savings_message"] =
                     ($contribution_type === "deposit")
@@ -396,7 +319,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 mysqli_rollback($conn);
 
-                $message = $e->getMessage();
+                error_log('Savings operation failed: '.$e->getMessage()); $message = 'Unable to save this contribution. Check the amount and available savings balance.';
                 $message_type = "danger";
             }
         }
@@ -459,6 +382,8 @@ while ($row = mysqli_fetch_assoc($goals_result)) {
 
 mysqli_stmt_close($goals_stmt);
 
+$archiveRows=fw_query($conn,'SELECT goal_id FROM fw_goal_archives WHERE user_id=?','i',[$user_id]);
+$archivedIds=array_map(static fn($r)=>(int)$r['goal_id'],$archiveRows);
 // Calculate total savings
 $total_savings = 0;
 $total_targets = 0;
@@ -800,7 +725,7 @@ require_once __DIR__ . "/../includes/header.php";
 
         </h5>
 
-        <form method="POST">
+        <form method="POST"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
 
             <input type="hidden" name="csrf_token"
                    value="<?php echo htmlspecialchars($_SESSION["csrf_token"]); ?>">
@@ -892,7 +817,7 @@ require_once __DIR__ . "/../includes/header.php";
                 Record Savings Contribution
             </h5>
 
-            <form method="POST">
+            <form method="POST"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
 
                 <input type="hidden" name="csrf_token"
                        value="<?php echo htmlspecialchars($_SESSION["csrf_token"]); ?>">
@@ -1060,7 +985,7 @@ require_once __DIR__ . "/../includes/header.php";
 
                                 </div>
 
-                                <?php if ($goal_completed): ?>
+                                <?php if(in_array((int)$goal['goal_id'],$archivedIds,true)): ?><span class="badge bg-secondary">Archived</span><?php elseif ($goal_completed): ?>
 
                                     <span class="badge bg-success">
                                         Completed
@@ -1152,12 +1077,12 @@ require_once __DIR__ . "/../includes/header.php";
                                 </a>
 
                                 <form method="POST"
-                                      onsubmit="return confirm('Delete this goal and ALL its contribution history? This cannot be undone.');">
+                                      onsubmit="return confirm('Archive this goal? Its balance and contribution history will be preserved.');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
 
                                     <input type="hidden" name="csrf_token"
                                            value="<?php echo htmlspecialchars($_SESSION["csrf_token"]); ?>">
 
-                                    <input type="hidden" name="action" value="delete_goal">
+                                    <input type="hidden" name="action" value="<?= in_array((int)$goal['goal_id'],$archivedIds,true)?'restore_goal':'delete_goal' ?>">
 
                                     <input type="hidden" name="goal_id"
                                            value="<?php echo (int) $goal["goal_id"]; ?>">
@@ -1165,7 +1090,7 @@ require_once __DIR__ . "/../includes/header.php";
                                     <button type="submit"
                                             class="btn btn-sm btn-outline-danger">
 
-                                        <i class="bi bi-trash"></i>
+                                        <i class="bi bi-archive" aria-hidden="true"></i> <?= in_array((int)$goal['goal_id'],$archivedIds,true)?'Restore':'Archive' ?>
 
                                     </button>
 

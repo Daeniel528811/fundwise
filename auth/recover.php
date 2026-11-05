@@ -1,0 +1,27 @@
+<?php
+require_once __DIR__.'/../includes/session.php';require_once __DIR__.'/../includes/db.php';require_once __DIR__.'/../includes/reliability.php';
+header('Cache-Control: private, no-store, max-age=0');
+if(isset($_SESSION['user_id'])){header('Location: '.BASE_URL.'/profile/');exit;}
+$_SESSION['csrf_token']??=bin2hex(random_bytes(32));$message='';
+if($_SERVER['REQUEST_METHOD']==='POST'){
+ $email=fw_text($_POST['email']??null);$code=fw_text($_POST['recovery_code']??null);$new=$_POST['new_password']??null;
+ if(!fw_csrf_valid()){$message='Invalid form. Refresh and try again.';http_response_code(403);}
+ elseif(!filter_var($email,FILTER_VALIDATE_EMAIL)||!fw_password_valid($new)||!is_string($_POST['confirm_password']??null)||$new!==$_POST['confirm_password'])$message='Enter valid account details and matching passwords of 8–72 characters.';
+ elseif(!fw_auth_attempt($conn,$email)){$message='Too many attempts. Try again in 15 minutes.';http_response_code(429);}
+ else{
+  mysqli_begin_transaction($conn);
+  try{
+   $user=fw_query($conn,'SELECT user_id FROM users WHERE email=? FOR UPDATE','s',[$email])[0]??null;
+   $secure=$user?fw_query($conn,'SELECT recovery_hash FROM fw_account_security WHERE user_id=? FOR UPDATE','i',[(int)$user['user_id']])[0]??null:null;
+   if(!$secure||!is_string($secure['recovery_hash'])||!hash_equals($secure['recovery_hash'],fw_recovery_hash($code)))throw new InvalidArgumentException('Recovery could not be completed. Check your email and recovery code.');
+   $uid=(int)$user['user_id'];$replacement=fw_recovery_code();
+   fw_query($conn,'UPDATE users SET password=? WHERE user_id=?','si',[password_hash($new,PASSWORD_DEFAULT),$uid]);
+   fw_query($conn,'UPDATE fw_account_security SET recovery_hash=?,credential_version=credential_version+1 WHERE user_id=?','si',[fw_recovery_hash($replacement),$uid]);
+   fw_audit($conn,$uid,'password.recovered');if(!mysqli_commit($conn))throw new RuntimeException('Unable to save.');
+   session_regenerate_id(true);$_SESSION['csrf_token']=bin2hex(random_bytes(32));$_SESSION['recovery_notice']=$replacement;
+   header('Location: login.php?recovered=1');exit;
+  }catch(Throwable $e){mysqli_rollback($conn);$message=$e instanceof InvalidArgumentException?$e->getMessage():'Recovery is temporarily unavailable. Please try again.';}
+ }
+}
+?>
+<!DOCTYPE html><html lang="en" data-bs-theme="light"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Account recovery | Fundwise</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/app.css?v=20261102" rel="stylesheet"><link href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/reliability.css?v=20261102" rel="stylesheet"></head><body><main class="fw-auth-form-side" style="min-height:100vh"><div class="fw-auth-form-wrap"><div class="fw-auth-kicker">ACCOUNT RECOVERY</div><h1 class="h2">Reset your password</h1><p class="fw-auth-intro">Use the recovery code you saved from registration or Settings. This code is secret and works once. Fundwise does not currently send reset emails.</p><?php if($message!==''):?><div class="alert alert-danger" role="alert"><?= htmlspecialchars($message,ENT_QUOTES,'UTF-8') ?></div><?php endif;?><form method="post"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'],ENT_QUOTES,'UTF-8') ?>"><div class="fw-auth-field"><label for="recoveryEmail">Account email</label><input id="recoveryEmail" type="email" name="email" class="form-control" required autocomplete="username"></div><div class="fw-auth-field"><label for="recoveryCode">Recovery code</label><input id="recoveryCode" type="password" name="recovery_code" class="form-control" required autocomplete="off" maxlength="64"></div><div class="fw-auth-field"><label for="newPassword">New password</label><input id="newPassword" type="password" name="new_password" class="form-control" required minlength="8" maxlength="72" autocomplete="new-password"></div><div class="fw-auth-field"><label for="confirmPassword">Confirm new password</label><input id="confirmPassword" type="password" name="confirm_password" class="form-control" required minlength="8" maxlength="72" autocomplete="new-password"></div><button class="btn btn-primary w-100" type="submit">Reset password</button></form><p class="mt-4"><a href="login.php">Back to sign in</a></p></div></main></body></html>

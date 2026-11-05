@@ -9,6 +9,7 @@ $user_id = (int) $_SESSION["user_id"];
 // The server validates the ISO-style code; the dropdown controls available choices.
 $default_currency_codes = ["PHP", "USD", "EUR", "GBP", "JPY", "AUD", "CAD", "SGD"];
 
+$securityFlash=$_SESSION['security_flash']??null;unset($_SESSION['security_flash']);
 $success = "";
 $error = "";
 
@@ -34,6 +35,7 @@ if (!$user) {
     die("User account not found.");
 }
 
+$currencyLocked=fw_currency_locked($conn,$user_id);
 // Process profile update
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
@@ -51,6 +53,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $error = "Please enter your full name.";
         } elseif (strlen($full_name) > 100) {
             $error = "Your name must not exceed 100 characters.";
+        } elseif ($currencyLocked && $preferred_currency !== strtoupper($user['preferred_currency'])) {
+            $error = 'Your ledger currency is fixed because financial records exist. Use Currency Converter for reference conversions.';
         } elseif (!preg_match('/^[A-Z]{3}$/D', $preferred_currency)) {
             $error = "Please select a valid currency.";
         } elseif (!in_array($theme, ["light", "dark"], true)) {
@@ -234,7 +238,7 @@ require_once __DIR__ . "/../includes/header.php";
 
                 <h5 class="section-title mb-4">Personal Information</h5>
 
-                <form method="POST" action="">
+                <form method="POST" action=""><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
 
                     <input
                         type="hidden"
@@ -290,7 +294,7 @@ require_once __DIR__ . "/../includes/header.php";
                             id="preferredCurrency"
                             class="form-select"
                             required
-                            data-selected="<?= htmlspecialchars($selected_currency, ENT_QUOTES, 'UTF-8') ?>"
+                            data-selected="<?= htmlspecialchars($selected_currency, ENT_QUOTES, 'UTF-8') ?>" <?= $currencyLocked ? 'disabled' : '' ?>
                         >
                             <?php
                             // Keep the saved choice usable even if the API is unavailable.
@@ -303,10 +307,10 @@ require_once __DIR__ . "/../includes/header.php";
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <small id="currencyLoadStatus" class="muted-text d-block mt-1" role="status">
+                        <?php if($currencyLocked):?><input type="hidden" name="preferred_currency" value="<?= htmlspecialchars($selected_currency,ENT_QUOTES,'UTF-8') ?>"><?php endif;?><small id="currencyLoadStatus" class="muted-text d-block mt-1" role="status">
                             Loading available currencies...
                         </small>
-                        <div class="form-text">Changing the currency changes the displayed code only. Existing transaction amounts are not converted.</div>
+                        <div class="form-text">Choose the currency your recorded amounts use. After financial records exist, it is locked to prevent relabeling historical amounts. Currency Converter remains a separate reference tool.</div>
 
                     </div>
 
@@ -335,6 +339,11 @@ require_once __DIR__ . "/../includes/header.php";
                 </form>
 
             </div>
+
+<section class="settings-card mt-4" id="accountSecurity"><h2 class="h5 section-title mb-3">Account security</h2>
+<?php if($securityFlash):?><div class="alert alert-<?= $securityFlash['ok']?'success':'danger' ?>" role="status"><?= htmlspecialchars($securityFlash['text'],ENT_QUOTES,'UTF-8') ?><?php if(isset($securityFlash['code'])):?><p class="mt-2 mb-1">Save this code now. It is shown once; never share it.</p><code class="fw-recovery-code"><?= htmlspecialchars($securityFlash['code'],ENT_QUOTES,'UTF-8') ?></code><?php endif;?></div><?php endif;?>
+<form method="post" action="security.php" class="fw-security-form"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'],ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="action" value="change_password"><div class="mb-3"><label class="form-label" for="currentPassword">Current password</label><input id="currentPassword" name="current_password" type="password" class="form-control" autocomplete="current-password" required maxlength="72"></div><div class="row g-3"><div class="col-md-6"><label class="form-label" for="newPassword">New password</label><input id="newPassword" name="new_password" type="password" class="form-control" autocomplete="new-password" minlength="8" maxlength="72" required></div><div class="col-md-6"><label class="form-label" for="confirmPassword">Confirm new password</label><input id="confirmPassword" name="confirm_password" type="password" class="form-control" autocomplete="new-password" minlength="8" maxlength="72" required></div></div><p class="form-text mt-3">Use 8–72 characters. Changing your password signs out other sessions and replaces your recovery code.</p><button class="btn btn-purple" type="submit">Change password</button></form>
+<hr class="my-4"><h3 class="h6">Recovery code</h3><p class="text-muted small">Existing accounts should generate a recovery code now. It lets you reset a forgotten password without email delivery. Regenerating replaces the previous code.</p><form method="post" action="security.php"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'],ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="action" value="recovery_code"><label class="form-label" for="recoveryCurrentPassword">Confirm current password</label><input id="recoveryCurrentPassword" name="current_password" type="password" class="form-control mb-3" autocomplete="current-password" required maxlength="72"><button class="btn btn-outline-primary" type="submit">Generate recovery code</button></form><p class="form-text mt-3">Email ownership is not verified in this version. Do not treat a registered address as a verified identity.</p></section>
 
             <div class="settings-card mt-4">
                 <h5 class="section-title">Account Information</h5>

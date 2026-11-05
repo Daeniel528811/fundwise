@@ -1,0 +1,34 @@
+/* Focused additions to the original Fundwise UI. */
+.fw-dashboard>.fi-note{display:flex;gap:12px;border:1px solid var(--fw-border);border-radius:12px;background:var(--fw-inset-bg);color:var(--fw-muted);font-size:12px;line-height:1.7;padding:15px 18px}
+.fw-dashboard>.fi-note>i{color:var(--fw-accent);font-size:18px;flex:none}
+.fw-pagination{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding:22px 0;font-size:12px;color:var(--fw-muted)}
+.fw-earnings-chart{height:270px;position:relative;min-width:0}
+.fw-expense-editor{border:1px solid var(--fw-border);padding:16px;border-radius:12px;min-width:0}
+.fw-expense-editor legend{float:none;width:auto;padding:0 7px;font-size:13px;font-weight:700;color:var(--fw-heading)}
+.fw-expense-row{display:grid;grid-template-columns:minmax(0,1fr) 30px;gap:8px;align-items:end;margin-bottom:18px;min-width:0}
+.fw-expense-row>div:first-child{grid-column:1/-1}
+.fw-expense-row label{width:100%;margin:0!important;font-size:10px!important}
+.fw-expense-row .form-control{width:100%;min-width:0;padding:9px!important;margin-top:6px}
+.fw-expense-row .fw-remove-expense{width:30px;height:42px;padding:0!important;margin-bottom:0;display:flex;align-items:center;justify-content:center}
+.fw-expense-total{border-top:1px solid var(--fw-border);margin-top:16px;padding-top:12px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--fw-muted)}
+.fw-expense-total strong{color:var(--fw-heading);font-variant-numeric:tabular-nums}
+.fw-work-history,.fw-work-entry{min-width:0;max-width:100%}
+.fw-work-entry{border:1px solid var(--fw-border);border-radius:13px;padding:20px;margin-bottom:16px;background:var(--fw-surface-alt)}
+.fw-work-entry-heading{display:flex;align-items:start;justify-content:space-between;gap:12px}
+.fw-work-entry-heading h3{font-size:15px;font-weight:800;color:var(--fw-heading);margin:0 0 5px}
+.fw-work-description{white-space:normal;overflow-wrap:anywhere;word-break:break-word;max-width:100%;font-size:12px;color:var(--fw-muted);line-height:1.75;margin:16px 0}
+.fw-work-numbers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:19px 0 12px}
+.fw-work-numbers dt{font-size:10px;font-weight:500;color:var(--fw-muted);margin-bottom:6px}
+.fw-work-numbers dd{color:var(--fw-heading);font-weight:700;font-size:13px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;margin:0}
+.fw-expense-details{border-top:1px solid var(--fw-border);padding-top:13px;font-size:11px}
+.fw-expense-details summary{cursor:pointer;color:var(--fw-accent);font-weight:700;display:flex;justify-content:space-between}
+.fw-expense-details ul{list-style:none;padding:0;margin:12px 0 0}
+.fw-expense-details li{display:flex;align-items:start;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--fw-border)}
+.fw-expense-details li span{min-width:0;overflow-wrap:anywhere;color:var(--fw-text)}
+.fw-expense-details li strong{flex:none;font-variant-numeric:tabular-nums;color:var(--fw-heading)}
+.fw-recovery-code{display:block;overflow-wrap:anywhere;padding:18px;background:var(--fw-inset-bg);color:var(--fw-heading);border-radius:10px;font-family:monospace;font-size:15px;letter-spacing:.04em;user-select:all}
+.fw-security-form .form-label{display:block}
+.fw-auth .fw-security-link{font-size:12px;display:block;text-align:right;margin-top:12px}
+.fw-security-message{font-size:12px;line-height:1.7}
+.fw-content .table td{overflow-wrap:anywhere}
+@media(max-width:767.98px){.fw-work-entry{padding:17px}.fw-earnings-chart{height:230px}.fw-work-numbers{gap:8px}.fw-work-numbers dd{font-size:12px}.fw-earnings-page .fi-panel{min-width:0}.fw-expense-editor{padding:12px}.fw-expense-row{grid-template-columns:minmax(0,1fr) 28px;gap:6px}}

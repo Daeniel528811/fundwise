@@ -22,14 +22,7 @@ mysqli_stmt_close($stmt);
 $full_name = $user["full_name"] ?? "User";
 $currency = strtoupper($user["preferred_currency"] ?? "PHP");
 
-$allowedCurrencies = [
-    "PHP", "USD", "EUR", "GBP",
-    "JPY", "AUD", "CAD", "SGD"
-];
-
-if (!in_array($currency, $allowedCurrencies, true)) {
-    $currency = "PHP";
-}
+if (!preg_match('/^[A-Z]{3}$/D', $currency)) { $currency='PHP'; }
 
 
 // HELPER FOR CURRENCY DISPLAY
@@ -42,7 +35,7 @@ function formatMoney($amount, $currency) {
 $stmt = mysqli_prepare($conn, "
     SELECT COALESCE(SUM(amount), 0) AS total
     FROM transactions
-    WHERE user_id = ? AND transaction_type = 'income'
+    WHERE user_id = ? AND transaction_type = 'income' AND transaction_date <= CURDATE()
 ");
 
 mysqli_stmt_bind_param($stmt, "i", $user_id);
@@ -59,7 +52,7 @@ mysqli_stmt_close($stmt);
 $stmt = mysqli_prepare($conn, "
     SELECT COALESCE(SUM(amount), 0) AS total
     FROM transactions
-    WHERE user_id = ? AND transaction_type = 'expense'
+    WHERE user_id = ? AND transaction_type = 'expense' AND transaction_date <= CURDATE()
 ");
 
 mysqli_stmt_bind_param($stmt, "i", $user_id);
@@ -168,7 +161,7 @@ $stmt = mysqli_prepare($conn, "
     LEFT JOIN savings_contributions sc
         ON sg.goal_id = sc.goal_id
 
-    WHERE sg.user_id = ?
+    WHERE sg.user_id = ? AND NOT EXISTS (SELECT 1 FROM fw_goal_archives a WHERE a.goal_id=sg.goal_id AND a.user_id=sg.user_id)
 
     GROUP BY
         sg.goal_id,
@@ -273,7 +266,7 @@ for ($i = 5; $i >= 0; $i--) {
         FROM transactions
 
         WHERE user_id = ?
-        AND transaction_date BETWEEN ? AND ?
+        AND transaction_date BETWEEN ? AND ? AND transaction_date <= CURDATE()
     ");
 
     mysqli_stmt_bind_param(
@@ -508,8 +501,8 @@ require_once __DIR__ . "/includes/header.php";
         </div></div>
         <div class="col-sm-6 col-xl-3"><div class="fw-stat focus">
             <div class="fw-stat-top"><span class="fw-stat-icon balance"><i class="bi bi-wallet2" aria-hidden="true"></i></span><span class="fw-stat-tag">Net balance</span></div>
-            <div class="fw-stat-label">Remaining balance</div><h3><?= htmlspecialchars(formatMoney($remainingBalance, $currency), ENT_QUOTES, 'UTF-8') ?></h3>
-            <p class="fw-stat-foot">Income minus expenses</p>
+            <div class="fw-stat-label">Recorded cash-flow balance</div><h3><?= htmlspecialchars(formatMoney($remainingBalance, $currency), ENT_QUOTES, 'UTF-8') ?></h3>
+            <p class="fw-stat-foot">Recorded income minus expenses; savings tracked separately</p>
         </div></div>
         <div class="col-sm-6 col-xl-3"><div class="fw-stat">
             <div class="fw-stat-top"><span class="fw-stat-icon savings"><i class="bi bi-piggy-bank" aria-hidden="true"></i></span><span class="fw-stat-tag">Saved money</span></div>
@@ -518,6 +511,7 @@ require_once __DIR__ . "/includes/header.php";
         </div></div>
     </section>
 
+    <div class="fi-note mb-4"><i class="bi bi-info-circle"></i><span>Cash flow and savings are separate records, not amounts to add together. Savings deposits do not reduce recorded cash flow. This app is a tracker, not a bank balance or transfer ledger.</span></div>
     <div class="fw-section-heading mt-2">
         <div><h2>Money insights</h2><p>Track how your money moves and where you plan to put it.</p></div>
     </div>

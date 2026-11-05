@@ -113,8 +113,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if (!in_array($transaction_type, ["income", "expense"], true)) {
             $message = "Please select a valid transaction type.";
             $message_type = "danger";
-        } elseif ($category_id <= 0 || $amount === null || $description === "" || !fw_valid_date($transaction_date)) {
-            $message = "Please complete all required fields and enter a valid amount.";
+        } elseif ($category_id <= 0 || $amount === null || $description === "" || (!fw_valid_date($transaction_date) || $transaction_date > date('Y-m-d'))) {
+            $message = "Enter valid fields, an amount with up to two decimals, and a date no later than today. Future transactions are not posted records.";
             $message_type = "danger";
         } elseif (strlen($description) > 255) {
             $message = "Description must not exceed 255 characters.";
@@ -156,7 +156,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 // If editing, retrieve the existing transaction
                 if ($transaction_id > 0) {
                     $old_sql = "
-                        SELECT receipt_image
+                        SELECT *
                         FROM transactions
                         WHERE transaction_id = ?
                         AND user_id = ?
@@ -265,7 +265,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         );
                     }
 
-                    if (mysqli_stmt_execute($stmt)) {
+                    if (fw_execute_transaction_change($conn,$stmt,$user_id,$transaction_id,$old_transaction ?? null)) {
 
                         mysqli_stmt_close($stmt);
 
@@ -307,7 +307,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $transaction_id = fw_positive_id($_POST["transaction_id"] ?? null);
 
         $find_sql = "
-            SELECT receipt_image
+            SELECT *
             FROM transactions
             WHERE transaction_id = ?
             AND user_id = ?
@@ -331,7 +331,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $delete_stmt = mysqli_prepare($conn, $delete_sql);
             mysqli_stmt_bind_param($delete_stmt, "ii", $transaction_id, $user_id);
 
-            if (mysqli_stmt_execute($delete_stmt)) {
+            if (fw_execute_transaction_change($conn,$delete_stmt,$user_id,$transaction_id,$transaction,true)) {
 
                 deleteReceiptFile($transaction["receipt_image"]);
 
@@ -493,7 +493,11 @@ if ($search !== "") {
     $types .= "ss";
 }
 
-$sql .= " ORDER BY t.transaction_date DESC, t.transaction_id DESC";
+$page=max(1,min(100000,(int)($_GET['page']??1))); $pageSize=50;
+$countStmt=mysqli_prepare($conn,'SELECT COUNT(*) AS total FROM ('.$sql.') AS filtered');
+mysqli_stmt_bind_param($countStmt,$types,...$params);mysqli_stmt_execute($countStmt);
+$filteredTotal=(int)mysqli_fetch_assoc(mysqli_stmt_get_result($countStmt))['total'];mysqli_stmt_close($countStmt);
+$sql .= " ORDER BY t.transaction_date DESC, t.transaction_id DESC LIMIT 50 OFFSET ".(($page-1)*50);
 
 $transaction_stmt = mysqli_prepare($conn, $sql);
 mysqli_stmt_bind_param($transaction_stmt, $types, ...$params);
@@ -506,7 +510,7 @@ $totals_sql = "
         COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END), 0) AS total_income,
         COALESCE(SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END), 0) AS total_expenses
     FROM transactions
-    WHERE user_id = ?
+    WHERE user_id = ? AND transaction_date <= CURDATE()
 ";
 
 $totals_stmt = mysqli_prepare($conn, $totals_sql);
@@ -708,7 +712,7 @@ require_once __DIR__ . "/../includes/header.php";
 
         <?php else: ?>
 
-            <form method="POST" enctype="multipart/form-data">
+            <form method="POST" enctype="multipart/form-data"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
 
                 <input type="hidden" name="csrf_token"
                        value="<?php echo htmlspecialchars($_SESSION["csrf_token"]); ?>">
@@ -933,7 +937,7 @@ require_once __DIR__ . "/../includes/header.php";
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="fw-bold mb-0">Transaction History</h5>
             <span class="text-muted small">
-                <?php echo mysqli_num_rows($transaction_result); ?> record(s)
+                <?php echo $filteredTotal; ?> matching record(s) · Page <?= $page ?>
             </span>
         </div>
 
@@ -1011,7 +1015,7 @@ require_once __DIR__ . "/../includes/header.php";
                                         </a>
 
                                         <form method="POST"
-                                              onsubmit="return confirm('Are you sure you want to delete this transaction?');">
+                                              onsubmit="return confirm('Are you sure you want to delete this transaction?');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
 
                                             <input type="hidden" name="csrf_token"
                                                    value="<?php echo htmlspecialchars($_SESSION["csrf_token"]); ?>">
@@ -1094,6 +1098,7 @@ transactionType.addEventListener("change", filterCategories);
 filterCategories();
 </script>
 
+<nav class="fw-pagination" aria-label="Transaction pages"><?php $pageQuery=$_GET; unset($pageQuery['edit']); if($page>1):$pageQuery['page']=$page-1;?><a class="btn btn-outline-primary" href="?<?= htmlspecialchars(http_build_query($pageQuery),ENT_QUOTES,'UTF-8') ?>">Previous</a><?php endif;?> <span>Page <?= $page ?> · Overview totals above are all time</span><?php if($page*50<$filteredTotal):$pageQuery['page']=$page+1;?><a class="btn btn-outline-primary" href="?<?= htmlspecialchars(http_build_query($pageQuery),ENT_QUOTES,'UTF-8') ?>">Next</a><?php endif;?></nav>
 <?php require_once __DIR__ . "/../includes/footer.php"; ?>
 
 <?php

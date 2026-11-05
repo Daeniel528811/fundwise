@@ -11,7 +11,7 @@ if (empty($_SESSION['csrf_token'])) {
 }
 
 function fi_h($value): string {
-    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+    return htmlspecialchars(is_scalar($value)?(string)$value:'', ENT_QUOTES, 'UTF-8');
 }
 function fi_cash($value, string $code = 'PHP'): string {
     return $code . ' ' . number_format((float)$value, 2);
@@ -28,7 +28,7 @@ function fi_currency(mysqli $conn, int $user_id): string {
 }
 function fi_query(mysqli $conn, string $sql, string $types = '', array $values = []): array {
     $stmt = mysqli_prepare($conn, $sql);
-    if (!$stmt) throw new RuntimeException('Unable to prepare query: ' . mysqli_error($conn));
+    if (!$stmt) throw new RuntimeException('Unable to prepare query.');
     if ($types !== '') {
         if (!mysqli_stmt_bind_param($stmt, $types, ...$values)) {
             mysqli_stmt_close($stmt);
@@ -38,7 +38,7 @@ function fi_query(mysqli $conn, string $sql, string $types = '', array $values =
     if (!mysqli_stmt_execute($stmt)) {
         $error = mysqli_stmt_error($stmt);
         mysqli_stmt_close($stmt);
-        throw new RuntimeException('Unable to execute query: ' . $error);
+        throw new RuntimeException('Unable to execute query.');
     }
     $result = mysqli_stmt_get_result($stmt);
     $rows = $result ? mysqli_fetch_all($result, MYSQLI_ASSOC) : [];
@@ -76,5 +76,5 @@ function fi_month($raw): string {
     return $raw;
 }
 function fi_db_notice(): void {
-    echo '<div class="alert alert-warning mt-4"><strong>One-time setup needed.</strong> Import <code>database/financial_intelligence.sql</code> into your existing <code>fundwise_db</code> using phpMyAdmin, then refresh. This only adds two tables; it does not change your current records.</div>';
+    echo '<div class="alert alert-warning mt-4"><strong>One-time setup needed.</strong> Import <code>database/financial_intelligence.sql</code> and <code>database/20261102_upgrade.sql</code> into your existing InfinityFree database using phpMyAdmin, then refresh. This only adds two tables; it does not change your current records.</div>';
 }

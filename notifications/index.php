@@ -13,111 +13,7 @@ if (empty($_SESSION["notification_csrf"])) {
     $_SESSION["notification_csrf"] = bin2hex(random_bytes(32));
 }
 
-// Generate automatic budget notifications
-$budget_sql = "
-    SELECT
-        b.budget_id,
-        b.category_id,
-        b.budget_limit,
-        b.start_date,
-        b.end_date,
-        c.category_name,
-        COALESCE(SUM(t.amount), 0) AS total_spent
-
-    FROM budgets b
-
-    INNER JOIN categories c
-        ON b.category_id = c.category_id
-
-    LEFT JOIN transactions t
-        ON t.category_id = b.category_id
-        AND t.user_id = b.user_id
-        AND t.transaction_type = 'expense'
-        AND t.transaction_date BETWEEN b.start_date AND b.end_date
-
-    WHERE b.user_id = ?
-    GROUP BY
-        b.budget_id,
-        b.category_id,
-        b.budget_limit,
-        b.start_date,
-        b.end_date,
-        c.category_name
-";
-
-$stmt = mysqli_prepare($conn, $budget_sql);
-mysqli_stmt_bind_param($stmt, "i", $user_id);
-mysqli_stmt_execute($stmt);
-
-$budget_result = mysqli_stmt_get_result($stmt);
-
-while ($budget = mysqli_fetch_assoc($budget_result)) {
-
-    $budget_limit = (float) $budget["budget_limit"];
-    $total_spent = (float) $budget["total_spent"];
-
-    if ($budget_limit <= 0) {
-        continue;
-    }
-
-    $percentage = ($total_spent / $budget_limit) * 100;
-
-    if ($percentage >= 100) {
-        $message = "You have exceeded your " .
-            $budget["category_name"] .
-            " budget. You have spent " .
-            number_format($total_spent, 2) .
-            " out of " .
-            number_format($budget_limit, 2) . ".";
-    } elseif ($percentage >= 80) {
-        $message = "Your " .
-            $budget["category_name"] .
-            " budget is almost used. You have spent " .
-            number_format($total_spent, 2) .
-            " out of " .
-            number_format($budget_limit, 2) . ".";
-    } else {
-        continue;
-    }
-
-    // Include budget period in the duplicate check
-    $message .= " Period: " .
-        $budget["start_date"] . " to " .
-        $budget["end_date"] . ".";
-
-    // Avoid creating the same notification repeatedly
-    $check_sql = "
-        SELECT notification_id
-        FROM notifications
-        WHERE user_id = ?
-          AND message = ?
-        LIMIT 1
-    ";
-
-    $check_stmt = mysqli_prepare($conn, $check_sql);
-    mysqli_stmt_bind_param($check_stmt, "is", $user_id, $message);
-    mysqli_stmt_execute($check_stmt);
-
-    $existing = mysqli_stmt_get_result($check_stmt);
-    $notification_exists = mysqli_num_rows($existing) > 0;
-
-    mysqli_stmt_close($check_stmt);
-
-    if (!$notification_exists) {
-
-        $insert_sql = "
-            INSERT INTO notifications (user_id, message, is_read)
-            VALUES (?, ?, 0)
-        ";
-
-        $insert_stmt = mysqli_prepare($conn, $insert_sql);
-        mysqli_stmt_bind_param($insert_stmt, "is", $user_id, $message);
-        mysqli_stmt_execute($insert_stmt);
-        mysqli_stmt_close($insert_stmt);
-    }
-}
-
-mysqli_stmt_close($stmt);
+fw_budget_notifications($conn,$user_id);
 
 // Process notification actions
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
@@ -365,7 +261,7 @@ require_once __DIR__ . "/../includes/header.php";
 
                                 <?php if ((int) $notification["is_read"] === 0): ?>
 
-                                    <form method="POST">
+                                    <form method="POST"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
                                         <input type="hidden" name="csrf_token"
                                                value="<?= htmlspecialchars($_SESSION["notification_csrf"]) ?>">
 
@@ -382,7 +278,7 @@ require_once __DIR__ . "/../includes/header.php";
                                 <?php endif; ?>
 
                                 <form method="POST"
-                                      onsubmit="return confirm('Delete this notification?');">
+                                      onsubmit="return confirm('Delete this notification?');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
 
                                     <input type="hidden" name="csrf_token"
                                            value="<?= htmlspecialchars($_SESSION["notification_csrf"]) ?>">

@@ -19,7 +19,8 @@ function validChallengeDate($value) {
     return fw_valid_date($value);
 }
 
-function getChallengeStatus($current, $target, $end_date) {
+function getChallengeStatus($current, $target, $end_date, $start_date = null) {
+    if ($start_date !== null && $start_date > date('Y-m-d')) return 'scheduled';
     if ($current >= $target) {
         return "completed";
     }
@@ -57,7 +58,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $error = "The end date cannot be earlier than the start date.";
             } else {
                 $current = 0;
-                $status = getChallengeStatus($current, $target, $end_date);
+                $status = getChallengeStatus($current, $target, $end_date, $start_date);
 
                 $stmt = mysqli_prepare($conn, "
                     INSERT INTO savings_challenges
@@ -94,7 +95,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $current = fw_money($_POST["current_amount"] ?? null, true);
 
             $stmt = mysqli_prepare($conn, "
-                SELECT target_amount, end_date
+                SELECT target_amount, end_date, start_date
                 FROM savings_challenges
                 WHERE challenge_id = ? AND user_id = ?
             ");
@@ -107,6 +108,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             if (!$challenge) {
                 $error = "Challenge not found.";
+            } elseif ($challenge['start_date'] > date('Y-m-d') || $challenge['end_date'] < date('Y-m-d')) {
+                $error = 'Progress can only be updated during the challenge dates.';
             } elseif ($current === null) {
                 $error = "Progress amount cannot be negative.";
             } elseif ($current > (float) $challenge["target_amount"]) {
@@ -115,7 +118,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $status = getChallengeStatus(
                     $current,
                     (float) $challenge["target_amount"],
-                    $challenge["end_date"]
+                    $challenge["end_date"], $challenge["start_date"]
                 );
 
                 $stmt = mysqli_prepare($conn, "
@@ -174,7 +177,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $error = "The new target cannot be lower than the current progress.";
             } else {
                 $current = (float) $existing["current_amount"];
-                $status = getChallengeStatus($current, $target, $end_date);
+                $status = getChallengeStatus($current, $target, $end_date, $start_date);
 
                 $stmt = mysqli_prepare($conn, "
                     UPDATE savings_challenges
@@ -260,7 +263,7 @@ while ($row = mysqli_fetch_assoc($result)) {
     $calculated_status = getChallengeStatus(
         (float) $row["current_amount"],
         (float) $row["target_amount"],
-        $row["end_date"]
+        $row["end_date"], $row["start_date"]
     );
 
     if ($row["status"] !== $calculated_status) {
@@ -296,7 +299,7 @@ $completed_count = 0;
 $total_progress = 0;
 
 foreach ($challenges as $challenge) {
-    if ($challenge["status"] === "active") {
+    if (in_array($challenge["status"], ["active","scheduled"], true)) {
         $active_count++;
     } elseif ($challenge["status"] === "completed") {
         $completed_count++;
@@ -432,7 +435,7 @@ require_once __DIR__ . "/../includes/header.php";
 
                 <div class="col-md-4">
                     <div class="summary-card">
-                        <p class="text-muted mb-1">Active Challenges</p>
+                        <p class="text-muted mb-1">Active / Upcoming Challenges</p>
                         <div class="summary-number">
                             <?= $active_count ?>
                         </div>
@@ -454,7 +457,7 @@ require_once __DIR__ . "/../includes/header.php";
             <div class="form-card mb-4">
                 <h5 class="section-title mb-3">Create a New Challenge</h5>
 
-                <form method="POST">
+                <form method="POST"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
                     <input type="hidden" name="csrf_token"
                            value="<?= htmlspecialchars($csrf_token) ?>">
                     <input type="hidden" name="action" value="create">
@@ -595,7 +598,7 @@ require_once __DIR__ . "/../includes/header.php";
                                 <hr>
 
                                 <!-- UPDATE PROGRESS -->
-                                <form method="POST" class="mb-3">
+                                <form method="POST" class="mb-3"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
                                     <input type="hidden" name="csrf_token"
                                            value="<?= htmlspecialchars($csrf_token) ?>">
                                     <input type="hidden" name="action" value="progress">
@@ -634,7 +637,7 @@ require_once __DIR__ . "/../includes/header.php";
                                         Edit Challenge Details
                                     </summary>
 
-                                    <form method="POST" class="mt-3">
+                                    <form method="POST" class="mt-3"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
                                         <input type="hidden" name="csrf_token"
                                                value="<?= htmlspecialchars($csrf_token) ?>">
                                         <input type="hidden" name="action" value="edit">
@@ -675,7 +678,7 @@ require_once __DIR__ . "/../includes/header.php";
 
                                 <!-- DELETE -->
                                 <form method="POST"
-                                      onsubmit="return confirm('Are you sure you want to delete this challenge?');">
+                                      onsubmit="return confirm('Are you sure you want to delete this challenge?');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
 
                                     <input type="hidden" name="csrf_token"
                                            value="<?= htmlspecialchars($csrf_token) ?>">

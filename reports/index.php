@@ -96,7 +96,7 @@ if ($date_error === "") {
 
         FROM transactions
         WHERE user_id = ?
-          AND transaction_date BETWEEN ? AND ?
+          AND transaction_date BETWEEN ? AND ? AND transaction_date <= CURDATE()
     ";
 
     $stmt = mysqli_prepare($conn, $summary_sql);
@@ -126,9 +126,9 @@ if ($date_error === "") {
             ON t.category_id = c.category_id
 
         WHERE t.user_id = ?
-          AND t.transaction_date BETWEEN ? AND ?
+          AND t.transaction_date BETWEEN ? AND ? AND t.transaction_date <= CURDATE()
 
-        ORDER BY t.transaction_date DESC, t.created_at DESC
+        ORDER BY t.transaction_date DESC, t.created_at DESC LIMIT 5001
     ";
 
     $stmt = mysqli_prepare($conn, $transaction_sql);
@@ -143,6 +143,8 @@ if ($date_error === "") {
 
     mysqli_stmt_close($stmt);
 
+    if(count($transactions)>5000){http_response_code(422);exit('This report exceeds 5,000 records. Select a smaller custom date range. No partial report was exported.');}
+
     // Expense breakdown by category
     $breakdown_sql = "
         SELECT
@@ -156,7 +158,7 @@ if ($date_error === "") {
 
         WHERE t.user_id = ?
           AND t.transaction_type = 'expense'
-          AND t.transaction_date BETWEEN ? AND ?
+          AND t.transaction_date BETWEEN ? AND ? AND t.transaction_date <= CURDATE()
 
         GROUP BY t.category_id, c.category_name
         ORDER BY total_amount DESC
@@ -528,8 +530,8 @@ require_once __DIR__ . "/../includes/header.php";
                                 Export Excel (.xlsx)
                             </a>
                             <a href="?period=<?= urlencode($period) ?>&start_date=<?= urlencode($start_date) ?>&end_date=<?= urlencode($end_date) ?>&export=csv"
-                               class="btn btn-outline-secondary">
-                                Export CSV
+                               class="btn btn-purple">
+                                Export CSV (.csv)
                             </a>
                         </div>
 

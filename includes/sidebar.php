@@ -47,12 +47,7 @@ $__navSections = [
     <?php endforeach; ?>
 </nav>
 <div class="fw-nav-bottom">
-    <a class="fw-sidebar-profile" href="<?= $__esc(BASE_URL) ?>/profile/">
-        <span class="fw-avatar" aria-hidden="true"><?= $__esc($__initial) ?></span>
-        <span class="fw-side-details"><strong><?= $__esc($__name) ?></strong><small>Personal account</small></span>
-        <i class="bi bi-three-dots" style="color:#8ea7c5" aria-hidden="true"></i>
-    </a>
-    <form method="post" action="<?= $__esc(BASE_URL . '/auth/logout.php') ?>">
+    <form method="post" action="<?= $__esc(BASE_URL . '/auth/logout.php') ?>"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
         <input type="hidden" name="csrf_token" value="<?= $__esc($_SESSION['csrf_token']) ?>">
         <button type="submit" class="fw-nav-link fw-nav-logout text-start">
             <i class="bi bi-box-arrow-right" aria-hidden="true"></i><span class="fw-nav-text">Log out</span>

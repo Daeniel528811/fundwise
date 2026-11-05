@@ -65,6 +65,7 @@ if ($ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+$page=max(1,min(100000,(int)($_GET['page']??1))); $offset=($page-1)*20;
 $experiments = [];
 if ($ready) {
     $experiments = fi_query($conn, "
@@ -72,18 +73,15 @@ if ($ready) {
                COALESCE((SELECT SUM(t.amount) FROM transactions t
                   WHERE t.user_id=e.user_id AND t.category_id=e.category_id
                     AND t.transaction_type='expense'
-                    AND t.transaction_date BETWEEN e.start_date AND e.end_date),0) AS actual_spending
+                    AND t.transaction_date BETWEEN e.start_date AND LEAST(e.end_date,CURDATE())),0) AS actual_spending
         FROM money_lab_experiments e
         INNER JOIN categories c ON c.category_id=e.category_id AND c.user_id=e.user_id
-        WHERE e.user_id=? ORDER BY e.start_date DESC, e.experiment_id DESC LIMIT 50
+        WHERE e.user_id=? ORDER BY e.start_date DESC, e.experiment_id DESC LIMIT 20 OFFSET {$offset}
     ", 'i', [$fi_user_id]);
 }
 $today = date('Y-m-d');
-$activeCount = 0; $finishedCount = 0; $successfulCount = 0;
-foreach ($experiments as $e) {
-    if ($e['end_date'] >= $today) $activeCount++;
-    else { $finishedCount++; if ((float)$e['actual_spending'] <= (float)$e['baseline_amount']*(1-(int)$e['reduction_percent']/100)) $successfulCount++; }
-}
+$counts=$ready?fi_query($conn,"SELECT COUNT(*) AS total, COALESCE(SUM(e.end_date>=CURDATE()),0) AS active, COALESCE(SUM(e.end_date<CURDATE()),0) AS finished, COALESCE(SUM(e.end_date<CURDATE() AND COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.user_id=e.user_id AND t.category_id=e.category_id AND t.transaction_type='expense' AND t.transaction_date BETWEEN e.start_date AND LEAST(e.end_date,CURDATE())),0)<=e.baseline_amount*(1-e.reduction_percent/100)),0) AS successful FROM money_lab_experiments e WHERE e.user_id=?",'i',[$fi_user_id])[0]:[];
+$activeCount=(int)($counts['active']??0);$finishedCount=(int)($counts['finished']??0);$successfulCount=(int)($counts['successful']??0);
 $pageTitle = 'Money Lab';
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -106,7 +104,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="col-lg-4">
             <section class="fi-panel fi-sticky" aria-labelledby="newExperiment">
                 <div class="fi-panel-heading"><div><span class="fi-mini-eyebrow">CREATE NEW</span><h2 id="newExperiment">Start an experiment</h2></div><span class="fi-icon-soft"><i class="bi bi-plus-lg"></i></span></div>
-                <form method="post" autocomplete="off">
+                <form method="post" autocomplete="off"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
                     <input type="hidden" name="csrf_token" value="<?= fi_h($_SESSION['csrf_token']) ?>">
                     <input type="hidden" name="action" value="create">
                     <div class="mb-3"><label class="form-label" for="experiment_title">Experiment title</label><input id="experiment_title" name="experiment_title" class="form-control" placeholder="e.g. Less takeout this week" maxlength="120" required value="<?= fi_h($_POST['experiment_title'] ?? '') ?>"></div>
@@ -142,7 +140,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2"><div><span class="fi-mini-eyebrow"><?= fi_h($e['category_name']) ?> · <?= (int)$e['duration_days'] ?> DAYS · <?= (int)$e['reduction_percent'] ?>% REDUCTION</span><h3><?= fi_h($e['experiment_title']) ?></h3><small class="text-muted"><?= fi_h(date('M j',strtotime($e['start_date']))) ?> – <?= fi_h(date('M j, Y',strtotime($e['end_date']))) ?> · <?= $e['baseline_source']==='manual'?'Manual baseline':'Previous-period baseline' ?></small></div><span class="fi-pill fi-pill-<?= $pill ?>"><?= fi_h($status) ?></span></div>
                     <div class="fi-exp-numbers"><span>Previously: <strong><?= fi_h(fi_cash($baseline,$currency)) ?></strong></span><span>Target: <strong><?= fi_h(fi_cash($target,$currency)) ?></strong></span><span>Actual: <strong><?= fi_h(fi_cash($actual,$currency)) ?></strong></span></div>
                     <div class="fi-meter"><span style="width:<?= round($percent,1) ?>%" class="<?= $percent>=100?'fi-meter-full':'' ?>"></span></div>
-                    <div class="d-flex justify-content-between align-items-center gap-2 mt-2 flex-wrap"><span class="fi-subtext"><?= $completed ? ($success?'Spent '.fi_h(fi_cash($target-$actual,$currency)).' less than your target.':'Spent '.fi_h(fi_cash($actual-$target,$currency)).' over your target.') : 'Target pace so far: '.fi_h(fi_cash($paceTarget,$currency)).' · Day '.$daysElapsed.' of '.(int)$e['duration_days'] ?></span><form method="post" onsubmit="return confirm('Remove this experiment? Actual transactions will not be deleted.');"><input type="hidden" name="csrf_token" value="<?= fi_h($_SESSION['csrf_token']) ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="experiment_id" value="<?= (int)$e['experiment_id'] ?>"><button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash3 me-1"></i> Remove</button></form></div>
+                    <div class="d-flex justify-content-between align-items-center gap-2 mt-2 flex-wrap"><span class="fi-subtext"><?= $completed ? ($success?'Spent '.fi_h(fi_cash($target-$actual,$currency)).' less than your target.':'Spent '.fi_h(fi_cash($actual-$target,$currency)).' over your target.') : 'Target pace so far: '.fi_h(fi_cash($paceTarget,$currency)).' · Day '.$daysElapsed.' of '.(int)$e['duration_days'] ?></span><form method="post" onsubmit="return confirm('Remove this experiment? Actual transactions will not be deleted.');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="csrf_token" value="<?= fi_h($_SESSION['csrf_token']) ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="experiment_id" value="<?= (int)$e['experiment_id'] ?>"><button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash3 me-1"></i> Remove</button></form></div>
                 </article>
                 <?php endforeach; ?>
                 <div class="fi-note mt-3"><i class="bi bi-shield-check"></i><span>Spending below a target is not automatically saved money. Your Savings Goals balance only changes when you record a contribution.</span></div>
@@ -150,4 +148,6 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
     </div>
 </div>
+<nav class="fw-pagination" aria-label="Experiment history pages"><?php if($page>1):?><a class="btn btn-outline-primary" href="?page=<?= $page-1 ?>">Previous</a><?php endif;?> <span>Page <?= $page ?></span> <?php if($page*20<(int)($counts['total']??0)):?><a class="btn btn-outline-primary" href="?page=<?= $page+1 ?>">Next</a><?php endif;?></nav>
+<div class="fi-note mt-3">Results are comparisons, not proof that an experiment caused a change. Missing records or edits to past transactions can change outcomes. The baseline is kept from the start of the experiment.</div>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

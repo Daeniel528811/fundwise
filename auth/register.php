@@ -2,6 +2,8 @@
 require_once "../includes/session.php";
 require_once "../includes/db.php";
 require_once "../includes/input.php";
+require_once "../includes/reliability.php";
+header("Cache-Control: private, no-store, max-age=0");
 
 if (isset($_SESSION['user_id'])) {
     header('Location: ' . BASE_URL . '/index.php');
@@ -22,8 +24,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $plain_password = $_POST['password'] ?? null;
         if ($full_name === '' || strlen($full_name) > 100 ||
             !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 100 ||
-            !is_string($plain_password) || strlen($plain_password) < 8 || strlen($plain_password) > 72) {
+            !is_string($plain_password) || strlen($plain_password) < 8 || strlen($plain_password) > 72 || str_contains($plain_password, "\0")) {
             $message = 'Enter a valid name and email. Password must be 8 to 72 characters.';
+        } elseif (!fw_auth_attempt($conn,$email)) {
+            http_response_code(429);
+            $message = 'Too many attempts. Try again in 15 minutes.';
         } else {
             $defaults = [
                 ['Salary', 'income'], ['Allowance', 'income'],
@@ -36,6 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $started = mysqli_begin_transaction($conn);
             try {
                 if (!$started) throw new RuntimeException('Transaction failed.');
+                fw_query($conn,'SELECT user_id FROM users WHERE email=? FOR UPDATE','s',[$email]);
+                if(fw_query($conn,'SELECT user_id FROM users WHERE email=?','s',[$email]))throw new RuntimeException('Account creation failed.');
                 $hash = password_hash($plain_password, PASSWORD_DEFAULT);
                 $stmt = mysqli_prepare($conn, 'INSERT INTO users (full_name, email, password) VALUES (?, ?, ?)');
                 if (!$stmt) throw new RuntimeException('Account creation failed.');
@@ -51,9 +58,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!mysqli_stmt_execute($stmt)) throw new RuntimeException('Category setup failed.');
                 }
                 mysqli_stmt_close($stmt);
+                $newRecovery=fw_recovery_code();
+                fw_query($conn,'INSERT INTO fw_account_security(user_id,recovery_hash) VALUES (?,?)','is',[$new_user_id,fw_recovery_hash($newRecovery)]);
+                fw_audit($conn,$new_user_id,'account.registered');
                 if (!mysqli_commit($conn)) throw new RuntimeException('Unable to finish registration.');
                 $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-                $message = 'Registration successful! You can now log in.';
+                $message = 'Registration successful! Save your recovery code before logging in.';
+                $_SESSION['new_account_recovery']=$newRecovery;
             } catch (Throwable $e) {
                 mysqli_rollback($conn);
                 $message = 'Registration failed. The email may already be registered.';
@@ -73,7 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link rel="icon" type="image/png" href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/assets/fundwise-mark.png">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/css/app.css?v=premium-20261031" rel="stylesheet">
+  <link href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/css/app.css?v=reliability-20261102" rel="stylesheet">
+<link href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/reliability.css?v=20261102" rel="stylesheet">
 </head>
 <body>
   <main class="fw-auth">
@@ -103,7 +115,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($message !== ''): ?>
           <div class="alert <?= strpos($message,'Registration successful') === 0 ? 'alert-success' : 'alert-danger' ?>" role="status"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div>
         <?php endif; ?>
-        <form method="POST" autocomplete="on">
+        <?php if(isset($_SESSION['new_account_recovery'])):$savedCode=$_SESSION['new_account_recovery'];unset($_SESSION['new_account_recovery']);?><div class="alert alert-warning fw-security-message">Save this secret recovery code somewhere safe. It is shown once and is needed if you forget your password.<code class="fw-recovery-code"><?= htmlspecialchars($savedCode,ENT_QUOTES,'UTF-8') ?></code></div><?php endif;?>
+        <form method="POST" autocomplete="on"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
           <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
           <div class="fw-auth-field">
             <label for="fwRegisterName">Full name</label>
@@ -127,6 +140,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     </section>
   </main>
-  <script src="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/js/ui.js?v=premium-20261031"></script>
+  <script src="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/js/ui.js?v=reliability-20261102"></script>
 </body>
 </html>

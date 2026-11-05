@@ -270,7 +270,7 @@ require_once __DIR__ . "/../includes/header.php";
                             Add Savings Allocation
                         </h5>
 
-                        <form method="POST">
+                        <form method="POST"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
 
                             <input type="hidden" name="csrf_token"
                                 value="<?= htmlspecialchars($csrf_token) ?>">
@@ -400,7 +400,7 @@ require_once __DIR__ . "/../includes/header.php";
 
                                             <form method="POST"
                                                 class="d-inline"
-                                                onsubmit="return confirm('Are you sure you want to delete this allocation?');">
+                                                onsubmit="return confirm('Are you sure you want to delete this allocation?');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
 
                                                 <input type="hidden"
                                                     name="csrf_token"
@@ -451,7 +451,7 @@ require_once __DIR__ . "/../includes/header.php";
 
                     <div class="modal-content">
 
-                        <form method="POST">
+                        <form method="POST"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
 
                             <div class="modal-header">
                                 <h5 class="modal-title">

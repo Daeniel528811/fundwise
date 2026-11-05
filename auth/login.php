@@ -2,6 +2,8 @@
 require_once "../includes/session.php";
 require_once "../includes/db.php";
 require_once "../includes/input.php";
+require_once "../includes/reliability.php";
+header("Cache-Control: private, no-store, max-age=0");
 
 if (isset($_SESSION["user_id"])) {
     header("Location: " . BASE_URL . "/index.php");
@@ -22,6 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $password = $_POST['password'] ?? null;
         if (!filter_var($email, FILTER_VALIDATE_EMAIL) || !is_string($password)) {
             $message = "Invalid email or password.";
+        } elseif (!fw_auth_attempt($conn,$email)) {
+            http_response_code(429);
+            $message = 'Too many attempts. Try again in 15 minutes.';
         } else {
             $stmt = mysqli_prepare($conn, "SELECT user_id, full_name, email, password FROM users WHERE email = ? LIMIT 1");
             mysqli_stmt_bind_param($stmt, "s", $email);
@@ -32,6 +37,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($account && password_verify($password, $account['password'])) {
                 session_regenerate_id(true);
                 $_SESSION['user_id'] = (int) $account['user_id'];
+                $_SESSION['credential_version']=fw_security_version($conn,(int)$account['user_id']);
+                $_SESSION['authenticated_at']=time();$_SESSION['last_activity']=time();
+                fw_auth_success($conn,$email);fw_audit($conn,(int)$account['user_id'],'login.success');
                 $_SESSION['full_name'] = $account['full_name'];
                 $_SESSION['email'] = $account['email'];
                 $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -54,7 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link rel="icon" type="image/png" href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/assets/fundwise-mark.png">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/css/app.css?v=premium-20261031" rel="stylesheet">
+  <link href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/css/app.css?v=reliability-20261102" rel="stylesheet">
+<link href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/reliability.css?v=20261102" rel="stylesheet">
 </head>
 <body>
   <main class="fw-auth">
@@ -84,7 +93,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($message !== ''): ?>
           <div class="alert alert-danger" role="alert"><i class="bi bi-exclamation-circle me-2" aria-hidden="true"></i><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div>
         <?php endif; ?>
-        <form method="POST" autocomplete="on">
+        <?php if(isset($_GET['expired'])):?><div class="alert alert-info">Your session expired or your credentials changed. Please sign in again.</div><?php endif;?>
+<?php if(isset($_SESSION['recovery_notice'])):$savedCode=$_SESSION['recovery_notice'];unset($_SESSION['recovery_notice']);?><div class="alert alert-success fw-security-message">Password reset. Save this replacement recovery code now; it is shown once.<code class="fw-recovery-code"><?= htmlspecialchars($savedCode,ENT_QUOTES,'UTF-8') ?></code></div><?php endif;?>
+<form method="POST" autocomplete="on"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
           <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
           <div class="fw-auth-field">
             <label for="fwLoginEmail">Email address</label>
@@ -99,10 +110,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
           <button class="btn btn-primary fw-auth-submit w-100 mt-2" type="submit">Sign in <i class="bi bi-arrow-right ms-2" aria-hidden="true"></i></button>
         </form>
+        <a class="fw-security-link" href="recover.php">Forgot password? Use your recovery code</a>
         <p class="fw-auth-bottom">New to Fundwise? <a href="register.php" class="fw-bold text-decoration-none">Create an account <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></p>
       </div>
     </section>
   </main>
-  <script src="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/js/ui.js?v=premium-20261031"></script>
+  <script src="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/js/ui.js?v=reliability-20261102"></script>
 </body>
 </html>

@@ -4,6 +4,8 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/session.php';
+require_once __DIR__ . '/reliability.php';
+fw_budget_notifications($conn,(int)($_SESSION['user_id']??0));
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: ' . BASE_URL . '/auth/login.php');
@@ -58,10 +60,11 @@ $__esc = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <?= $pageHead ?>
-    <link href="<?= $__esc(BASE_URL) ?>/css/app.css?v=features-20261031" rel="stylesheet">
+    <link href="<?= $__esc(BASE_URL) ?>/css/app.css?v=reliability-20261102" rel="stylesheet">
+<link href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/reliability.css?v=20261102" rel="stylesheet">
 </head>
 <body>
 <a class="fw-skip" href="#fw-content">Skip to content</a>

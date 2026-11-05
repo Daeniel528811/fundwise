@@ -6,7 +6,7 @@ $summary = fi_query($conn, "
     SELECT
         COALESCE(SUM(CASE WHEN transaction_type='income' THEN amount ELSE 0 END),0) AS income,
         COALESCE(SUM(CASE WHEN transaction_type='expense' THEN amount ELSE 0 END),0) AS expenses
-    FROM transactions WHERE user_id = ?
+    FROM transactions WHERE user_id = ? AND transaction_date <= CURDATE()
 ", 'i', [$fi_user_id]);
 $income = (float)($summary[0]['income'] ?? 0);
 $expenses = (float)($summary[0]['expenses'] ?? 0);
@@ -17,7 +17,7 @@ $goals = fi_query($conn, "
            COALESCE(SUM(CASE WHEN sc.contribution_type = 'deposit' THEN sc.amount
                 WHEN sc.contribution_type = 'withdrawal' THEN -sc.amount ELSE 0 END),0) AS saved
     FROM savings_goals sg LEFT JOIN savings_contributions sc ON sc.goal_id=sg.goal_id
-    WHERE sg.user_id = ?
+    WHERE sg.user_id = ? AND NOT EXISTS (SELECT 1 FROM fw_goal_archives a WHERE a.goal_id=sg.goal_id AND a.user_id=sg.user_id)
     GROUP BY sg.goal_id, sg.goal_name, sg.target_amount
     ORDER BY sg.goal_name
 ", 'i', [$fi_user_id]);
@@ -29,7 +29,7 @@ $budgets = fi_query($conn, "
            COALESCE((SELECT SUM(t.amount) FROM transactions t
                 WHERE t.user_id=b.user_id AND t.category_id=b.category_id
                 AND t.transaction_type='expense'
-                AND t.transaction_date BETWEEN b.start_date AND b.end_date),0) AS spent
+                AND t.transaction_date BETWEEN b.start_date AND LEAST(b.end_date,CURDATE())),0) AS spent
     FROM budgets b INNER JOIN categories c ON c.category_id=b.category_id AND c.user_id=b.user_id
     WHERE b.user_id=? AND c.category_type='expense' AND ? BETWEEN b.start_date AND b.end_date
     ORDER BY c.category_name
@@ -60,7 +60,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="fi-panel-heading"><div><span class="fi-mini-eyebrow">01 / SETUP</span><h2 id="mapSetup">Planned purchase</h2></div><span class="fi-icon-soft"><i class="bi bi-bag-check"></i></span></div>
         <div class="mb-3"><label class="form-label" for="purchaseTitle">What are you planning to buy?</label><input id="purchaseTitle" class="form-control" value="New headphones" maxlength="80" placeholder="e.g. New headphones"></div>
         <div class="mb-3"><label class="form-label" for="purchaseAmount">Expected price (<?= fi_h($currency) ?>)</label><input id="purchaseAmount" class="form-control" type="number" value="2500" min="0" max="9999999999.99" step="0.01" inputmode="decimal"></div>
-        <div class="mb-3"><label class="form-label" for="purchaseSource">Where will the money come from?</label><select id="purchaseSource" class="form-select"><option value="balance">Remaining income balance</option><option value="goal" <?= count($goals) ? '' : 'disabled' ?>>Existing savings goal</option></select></div>
+        <div class="mb-3"><label class="form-label" for="purchaseSource">Where will the money come from?</label><select id="purchaseSource" class="form-select"><option value="balance">Recorded cash-flow balance</option><option value="goal" <?= count($goals) ? '' : 'disabled' ?>>Existing savings goal</option></select></div>
         <div class="mb-3 d-none" id="mapGoalWrap"><label class="form-label" for="mapGoal">Savings goal</label><select id="mapGoal" class="form-select"><?php foreach ($goals as $g): ?><option value="<?= (int)$g['goal_id'] ?>"><?= fi_h($g['goal_name']) ?></option><?php endforeach ?></select><div class="form-text">Goal savings are tracked separately from income minus expenses.</div></div>
         <div class="mb-3 d-none" id="mapMonthlyWrap"><label class="form-label" for="monthlySave">Planned monthly goal contribution (<?= fi_h($currency) ?>)</label><input id="monthlySave" type="number" min="0" step="0.01" class="form-control" value="1000"><div class="form-text">For estimated goal completion delay only.</div></div>
         <div class="mb-3"><label class="form-label" for="mapBudget">Which budget category would this purchase affect?</label><select id="mapBudget" class="form-select"><option value="">No active category budget</option><?php foreach ($budgets as $b): ?><option value="<?= (int)$b['budget_id'] ?>"><?= fi_h($b['category_name']) ?></option><?php endforeach ?></select></div>

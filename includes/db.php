@@ -13,4 +13,8 @@ if (!$conn) {
 }
 
 mysqli_set_charset($conn, "utf8mb4");
+// Keep SQL CURDATE()/NOW() aligned with PHP and the user's Manila work dates.
+if (!mysqli_query($conn, "SET time_zone = '+08:00'")) {
+    throw new RuntimeException('Unable to configure the database session timezone.');
+}
 date_default_timezone_set("Asia/Manila");

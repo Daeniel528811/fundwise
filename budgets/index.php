@@ -99,6 +99,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     mysqli_stmt_close($owner_stmt);
                 }
 
+                // Serialize budget writes per owner before the overlap check.
+                if(!mysqli_begin_transaction($conn))throw new RuntimeException('Unable to start budget update.');
+                fw_query($conn,'SELECT user_id FROM users WHERE user_id=? FOR UPDATE','i',[$user_id]);
                 // Prevent overlapping budgets for the same expense category.
                 // Both start and end dates are inclusive.
                 $overlap_stmt = mysqli_prepare($conn, "
@@ -182,6 +185,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 if (mysqli_stmt_execute($stmt)) {
 
+                    if(!mysqli_commit($conn))throw new RuntimeException('Unable to finish budget update.');
                     $_SESSION["budget_message"] =
                         ($budget_id > 0)
                         ? "Budget updated successfully!"
@@ -202,6 +206,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     mysqli_stmt_close($stmt);
                 }
                 } // End validated budget save.
+                if($message!=='')mysqli_rollback($conn);
             }
         }
     }
@@ -314,7 +319,7 @@ $budget_sql = "
                 WHERE t.user_id = b.user_id
                 AND t.category_id = b.category_id
                 AND t.transaction_type = 'expense'
-                AND t.transaction_date BETWEEN b.start_date AND b.end_date
+                AND t.transaction_date BETWEEN b.start_date AND LEAST(b.end_date,CURDATE())
             ),
             0
         ) AS total_spent
@@ -563,7 +568,7 @@ require_once __DIR__ . "/../includes/header.php";
 
         <?php else: ?>
 
-            <form method="POST">
+            <form method="POST"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
 
                 <input type="hidden" name="csrf_token"
                        value="<?php echo htmlspecialchars($_SESSION["csrf_token"]); ?>">
@@ -834,7 +839,7 @@ require_once __DIR__ . "/../includes/header.php";
                                 </a>
 
                                 <form method="POST" class="flex-fill"
-                                      onsubmit="return confirm('Are you sure you want to delete this budget?');">
+                                      onsubmit="return confirm('Are you sure you want to delete this budget?');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
 
                                     <input type="hidden" name="csrf_token"
                                            value="<?php echo htmlspecialchars($_SESSION["csrf_token"]); ?>">

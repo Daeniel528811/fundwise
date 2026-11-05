@@ -1,6 +1,18 @@
 // UI-only enhancements shared by Fundwise pages.
 (() => {
   'use strict';
+  let fieldIndex = 0;
+  document.querySelectorAll('label.form-label:not([for])').forEach(label => {
+    if (label.querySelector('input,select,textarea')) return;
+    const control=label.parentElement.querySelector('input:not([type="hidden"]),select,textarea');
+    if (!control) return;
+    if (!control.id) {
+      let id;
+      do { id='fw-field-'+(++fieldIndex); } while(document.getElementById(id));
+      control.id=id;
+    }
+    label.htmlFor=control.id;
+  });
   document.querySelectorAll('[data-fw-password-toggle]').forEach(button => {
     const input = document.getElementById(button.dataset.fwPasswordToggle);
     if (!input) return;
