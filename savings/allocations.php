@@ -47,12 +47,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 mysqli_begin_transaction($conn);
                 try {
                     $lock = mysqli_prepare($conn, 'SELECT user_id FROM users WHERE user_id = ? FOR UPDATE');
-                    if (!$lock) throw new RuntimeException('Could not verify account.');
+                    if (!$lock) {
+                        throw new RuntimeException('Could not verify account.');
+                    }
                     mysqli_stmt_bind_param($lock, 'i', $user_id);
-                    if (!mysqli_stmt_execute($lock)) throw new RuntimeException('Could not verify account.');
+                    if (!mysqli_stmt_execute($lock)) {
+                        throw new RuntimeException('Could not verify account.');
+                    }
                     $exists = mysqli_num_rows(mysqli_stmt_get_result($lock)) > 0;
                     mysqli_stmt_close($lock);
-                    if (!$exists) throw new RuntimeException('User account not found.');
+                    if (!$exists) {
+                        throw new RuntimeException('User account not found.');
+                    }
 
                     if ($action === 'update') {
                         $stmt = mysqli_prepare($conn, 'SELECT allocation_id FROM savings_allocations WHERE allocation_id = ? AND user_id = ?');
@@ -60,7 +66,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         mysqli_stmt_execute($stmt);
                         $owns = mysqli_num_rows(mysqli_stmt_get_result($stmt)) > 0;
                         mysqli_stmt_close($stmt);
-                        if (!$owns) throw new RuntimeException('Allocation not found or not yours.');
+                        if (!$owns) {
+                            throw new RuntimeException('Allocation not found or not yours.');
+                        }
                     }
                     $stmt = mysqli_prepare($conn, 'SELECT COALESCE(SUM(allocation_percentage), 0) AS total FROM savings_allocations WHERE user_id = ? AND allocation_id <> ?');
                     mysqli_stmt_bind_param($stmt, 'ii', $user_id, $allocation_id);
@@ -78,9 +86,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt = mysqli_prepare($conn, 'UPDATE savings_allocations SET allocation_name = ?, allocation_percentage = ? WHERE allocation_id = ? AND user_id = ?');
                         mysqli_stmt_bind_param($stmt, 'sdii', $name, $percentage, $allocation_id, $user_id);
                     }
-                    if (!$stmt || !mysqli_stmt_execute($stmt)) throw new RuntimeException('Unable to save allocation.');
+                    if (!$stmt || !mysqli_stmt_execute($stmt)) {
+                        throw new RuntimeException('Unable to save allocation.');
+                    }
                     mysqli_stmt_close($stmt);
-                    if (!mysqli_commit($conn)) throw new RuntimeException('Unable to save allocation.');
+                    if (!mysqli_commit($conn)) {
+                        throw new RuntimeException('Unable to save allocation.');
+                    }
                     header('Location: allocations.php?success=' . ($action === 'add' ? 'added' : 'updated'));
                     exit;
                 } catch (Throwable $e) {
@@ -167,43 +179,45 @@ ob_start();
 @media(max-width:767.98px){.fw-allocations .fw-allocation-summary{gap:12px;margin:20px 0}.fw-allocations .fw-allocation-summary .fi-stat{padding:18px 15px;min-height:120px}.fw-allocations .fw-allocation-row{gap:12px;padding:20px 0;flex-wrap:wrap}.fw-allocations .fw-allocation-icon{width:39px;height:39px;font-size:18px;border-radius:11px}.fw-allocations .fw-allocation-name{font-size:13px}.fw-allocations .fw-allocation-copy{flex:1;min-width:90px}.fw-allocations .fw-allocation-share{font-size:12px;padding:7px 9px}.fw-allocations .fw-allocation-actions{flex:1 0 calc(100% - 51px);justify-content:flex-end;margin-left:51px}.fw-allocations .fw-allocation-meter{max-width:100%}.fw-allocations .fw-allocation-chart{height:245px}.fw-allocations .fw-allocation-available{font-size:11px}}
 </style>
 <?php
-$pageHead=ob_get_clean();
-require_once __DIR__.'/../includes/header.php';
+$pageHead = ob_get_clean();
+require_once __DIR__ . '/../includes/header.php';
 ?>
 <div class="fi-page fw-allocations">
  <section class="fi-hero" aria-labelledby="allocationTitle"><div><span class="fi-kicker"><i class="bi bi-diagram-3" aria-hidden="true"></i> PLAN &amp; GROW / SAVINGS PLAN</span><h1 id="allocationTitle">Your savings,<br><span>allocated.</span></h1><p>Decide how to divide your savings among the priorities that matter to you. Your plan can total up to 100%.</p></div><div class="fi-hero-icon"><i class="bi bi-pie-chart" aria-hidden="true"></i></div></section>
- <?php if($message):?><div class="alert alert-success mt-3" role="status"><?= htmlspecialchars($message,ENT_QUOTES,'UTF-8') ?></div><?php endif;?>
- <?php if($error):?><div class="alert alert-danger mt-3" role="alert"><?= htmlspecialchars($error,ENT_QUOTES,'UTF-8') ?></div><?php endif;?>
- <section class="fw-allocation-summary" aria-label="Allocation summary"><div class="fi-stat fi-stat-featured"><span><i class="bi bi-pie-chart" aria-hidden="true"></i> Total allocated</span><strong><?= number_format($total_percentage,2) ?>%</strong><small>Across <?= count($allocations) ?> allocation<?= count($allocations)===1?'':'s' ?></small></div><div class="fi-stat"><span><i class="bi bi-plus-circle" aria-hidden="true"></i> Available to allocate</span><strong><?= number_format($remaining_percentage,2) ?>%</strong><small><?= $remaining_percentage>0?'Not yet allocated':'Your savings plan is fully allocated' ?></small></div></section>
+ <?php if ($message):?><div class="alert alert-success mt-3" role="status"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
+ <?php if ($error):?><div class="alert alert-danger mt-3" role="alert"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
+ <section class="fw-allocation-summary" aria-label="Allocation summary"><div class="fi-stat fi-stat-featured"><span><i class="bi bi-pie-chart" aria-hidden="true"></i> Total allocated</span><strong><?= number_format($total_percentage, 2) ?>%</strong><small>Across <?= count($allocations) ?> allocation<?= count($allocations) === 1 ? '' : 's' ?></small></div><div class="fi-stat"><span><i class="bi bi-plus-circle" aria-hidden="true"></i> Available to allocate</span><strong><?= number_format($remaining_percentage, 2) ?>%</strong><small><?= $remaining_percentage > 0 ? 'Not yet allocated' : 'Your savings plan is fully allocated' ?></small></div></section>
  <div class="row g-4">
   <div class="col-lg-5"><section class="fi-panel h-100" id="allocationForm" aria-labelledby="addAllocationTitle"><div class="fi-panel-heading"><div><span class="fi-mini-eyebrow">BUILD YOUR PLAN</span><h2 id="addAllocationTitle">Add an allocation</h2></div><span class="fi-icon-soft"><i class="bi bi-plus-lg" aria-hidden="true"></i></span></div>
-   <form method="post"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token,ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="action" value="add">
+   <form method="post"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="action" value="add">
     <div class="mb-3"><label class="form-label" for="allocationName">Allocation name</label><input type="text" name="allocation_name" id="allocationName" class="form-control" placeholder="e.g. Emergency fund" maxlength="100" required></div>
-    <div class="mb-3"><label class="form-label" for="allocationPercentage">Share of your savings (%)</label><input type="number" name="allocation_percentage" id="allocationPercentage" class="form-control" placeholder="e.g. 20" min="0.01" max="100" step="0.01" required><div class="form-text"><?= number_format($remaining_percentage,2) ?>% is currently available. The combined plan cannot exceed 100%.</div></div>
+    <div class="mb-3"><label class="form-label" for="allocationPercentage">Share of your savings (%)</label><input type="number" name="allocation_percentage" id="allocationPercentage" class="form-control" placeholder="e.g. 20" min="0.01" max="100" step="0.01" required><div class="form-text"><?= number_format($remaining_percentage, 2) ?>% is currently available. The combined plan cannot exceed 100%.</div></div>
     <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Add allocation</button>
    </form><p class="fw-allocation-form-note">These percentages describe your plan. Adding or changing an allocation does not move money or change your savings balance.</p>
   </section></div>
   <div class="col-lg-7"><section class="fi-panel h-100" aria-labelledby="allocationChartTitle"><div class="fi-panel-heading"><div><span class="fi-mini-eyebrow">YOUR SAVINGS MIX</span><h2 id="allocationChartTitle">Allocation breakdown</h2></div><span class="fi-icon-soft"><i class="bi bi-pie-chart" aria-hidden="true"></i></span></div>
-   <?php if($allocations):?><div class="fw-allocation-chart"><canvas id="allocationChart" role="img" aria-label="Savings allocation percentages. Exact values are listed in Your savings allocations below."></canvas></div><p class="fw-allocation-chart-copy">Each segment is a planned share. Any unallocated percentage is included so the chart represents the full 100%.</p><?php else:?><div class="fi-empty"><i class="bi bi-pie-chart" aria-hidden="true"></i><h3>Give your savings a plan</h3><p>Add your first allocation to see how your priorities fit together.</p></div><?php endif;?>
+   <?php if ($allocations):?><div class="fw-allocation-chart"><canvas id="allocationChart" role="img" aria-label="Savings allocation percentages. Exact values are listed in Your savings allocations below."></canvas></div><p class="fw-allocation-chart-copy">Each segment is a planned share. Any unallocated percentage is included so the chart represents the full 100%.</p><?php else:?><div class="fi-empty"><i class="bi bi-pie-chart" aria-hidden="true"></i><h3>Give your savings a plan</h3><p>Add your first allocation to see how your priorities fit together.</p></div><?php endif; ?>
   </section></div>
  </div>
- <section class="fi-panel fw-allocation-list" aria-labelledby="allocationListTitle"><div class="fi-panel-heading"><div><span class="fi-mini-eyebrow"><?= count($allocations) ?> ALLOCATION<?= count($allocations)===1?'':'S' ?></span><h2 id="allocationListTitle">Your savings allocations</h2></div><span class="fi-icon-soft"><i class="bi bi-diagram-3" aria-hidden="true"></i></span></div>
-  <?php if(!$allocations):?><div class="fi-empty"><i class="bi bi-diagram-3" aria-hidden="true"></i><h3>No allocations yet</h3><p>Start with a priority such as an emergency fund, education, or travel.</p><a class="btn btn-outline-primary btn-sm mt-3" href="#allocationForm">Add your first allocation</a></div><?php endif;?>
-  <div><?php foreach($allocations as $allocation):$share=(float)$allocation['allocation_percentage'];$name=(string)$allocation['allocation_name'];$id=(int)$allocation['allocation_id'];?>
-   <article class="fw-allocation-row"><span class="fw-allocation-icon"><i class="bi bi-pie-chart" aria-hidden="true"></i></span><div class="fw-allocation-copy"><strong class="fw-allocation-name"><?= htmlspecialchars($name,ENT_QUOTES,'UTF-8') ?></strong><span class="fw-allocation-caption">Planned share of your savings</span><div class="fw-allocation-meter" aria-hidden="true"><span style="width:<?= number_format(min(100,max(0,$share)),2,'.','') ?>%"></span></div></div><span class="fw-allocation-share"><?= number_format($share,2) ?>%</span>
-    <div class="fw-allocation-actions"><button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal" data-allocation-id="<?= $id ?>" data-allocation-name="<?= htmlspecialchars($name,ENT_QUOTES,'UTF-8') ?>" data-allocation-percentage="<?= number_format($share,2,'.','') ?>" aria-label="Edit <?= htmlspecialchars($name,ENT_QUOTES,'UTF-8') ?>"><i class="bi bi-pencil me-1" aria-hidden="true"></i> Edit</button>
-     <form method="post" onsubmit="return confirm('Delete this allocation? Your saved money and transactions will not change.');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token,ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="allocation_id" value="<?= $id ?>"><button type="submit" class="btn btn-sm btn-outline-danger fw-allocation-delete" aria-label="Delete <?= htmlspecialchars($name,ENT_QUOTES,'UTF-8') ?>" title="Delete allocation"><i class="bi bi-trash3" aria-hidden="true"></i></button></form>
+ <section class="fi-panel fw-allocation-list" aria-labelledby="allocationListTitle"><div class="fi-panel-heading"><div><span class="fi-mini-eyebrow"><?= count($allocations) ?> ALLOCATION<?= count($allocations) === 1 ? '' : 'S' ?></span><h2 id="allocationListTitle">Your savings allocations</h2></div><span class="fi-icon-soft"><i class="bi bi-diagram-3" aria-hidden="true"></i></span></div>
+  <?php if (!$allocations):?><div class="fi-empty"><i class="bi bi-diagram-3" aria-hidden="true"></i><h3>No allocations yet</h3><p>Start with a priority such as an emergency fund, education, or travel.</p><a class="btn btn-outline-primary btn-sm mt-3" href="#allocationForm">Add your first allocation</a></div><?php endif; ?>
+  <div><?php foreach ($allocations as $allocation):$share = (float) $allocation['allocation_percentage'];
+      $name = (string) $allocation['allocation_name'];
+      $id = (int) $allocation['allocation_id']; ?>
+   <article class="fw-allocation-row"><span class="fw-allocation-icon"><i class="bi bi-pie-chart" aria-hidden="true"></i></span><div class="fw-allocation-copy"><strong class="fw-allocation-name"><?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?></strong><span class="fw-allocation-caption">Planned share of your savings</span><div class="fw-allocation-meter" aria-hidden="true"><span style="width:<?= number_format(min(100, max(0, $share)), 2, '.', '') ?>%"></span></div></div><span class="fw-allocation-share"><?= number_format($share, 2) ?>%</span>
+    <div class="fw-allocation-actions"><button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal" data-allocation-id="<?= $id ?>" data-allocation-name="<?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?>" data-allocation-percentage="<?= number_format($share, 2, '.', '') ?>" aria-label="Edit <?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?>"><i class="bi bi-pencil me-1" aria-hidden="true"></i> Edit</button>
+     <form method="post" onsubmit="return confirm('Delete this allocation? Your saved money and transactions will not change.');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="allocation_id" value="<?= $id ?>"><button type="submit" class="btn btn-sm btn-outline-danger fw-allocation-delete" aria-label="Delete <?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?>" title="Delete allocation"><i class="bi bi-trash3" aria-hidden="true"></i></button></form>
     </div>
-   </article><?php endforeach;?></div>
-  <?php if($remaining_percentage>0):?><div class="fw-allocation-available"><i class="bi bi-plus-circle" aria-hidden="true"></i><span><strong><?= number_format($remaining_percentage,2) ?>% still available.</strong> You can assign it to another priority or leave it unallocated.</span></div><?php else:?><div class="fw-allocation-available"><i class="bi bi-check2-circle" aria-hidden="true"></i><span><strong>Your plan adds up to 100%.</strong> Edit an existing share if you want to make room for a new priority.</span></div><?php endif;?>
+   </article><?php endforeach; ?></div>
+  <?php if ($remaining_percentage > 0):?><div class="fw-allocation-available"><i class="bi bi-plus-circle" aria-hidden="true"></i><span><strong><?= number_format($remaining_percentage, 2) ?>% still available.</strong> You can assign it to another priority or leave it unallocated.</span></div><?php else:?><div class="fw-allocation-available"><i class="bi bi-check2-circle" aria-hidden="true"></i><span><strong>Your plan adds up to 100%.</strong> Edit an existing share if you want to make room for a new priority.</span></div><?php endif; ?>
  </section>
 </div>
-<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editAllocationTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form method="post"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>"><div class="modal-header"><div><span class="fi-mini-eyebrow">REFINE YOUR PLAN</span><h2 class="modal-title fs-5 mt-1" id="editAllocationTitle">Edit allocation</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close edit allocation"></button></div><div class="modal-body"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token,ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="action" value="update"><input type="hidden" name="allocation_id" id="edit_id"><div class="mb-3"><label class="form-label" for="edit_name">Allocation name</label><input type="text" name="allocation_name" id="edit_name" class="form-control" maxlength="100" required></div><div><label class="form-label" for="edit_percentage">Share of your savings (%)</label><input type="number" name="allocation_percentage" id="edit_percentage" class="form-control" min="0.01" max="100" step="0.01" required><p class="form-text mb-0">The combined percentage of all allocations must stay at or below 100%.</p></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Save changes</button></div></form></div></div></div>
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editAllocationTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form method="post"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>"><div class="modal-header"><div><span class="fi-mini-eyebrow">REFINE YOUR PLAN</span><h2 class="modal-title fs-5 mt-1" id="editAllocationTitle">Edit allocation</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close edit allocation"></button></div><div class="modal-body"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="action" value="update"><input type="hidden" name="allocation_id" id="edit_id"><div class="mb-3"><label class="form-label" for="edit_name">Allocation name</label><input type="text" name="allocation_name" id="edit_name" class="form-control" maxlength="100" required></div><div><label class="form-label" for="edit_percentage">Share of your savings (%)</label><input type="number" name="allocation_percentage" id="edit_percentage" class="form-control" min="0.01" max="100" step="0.01" required><p class="form-text mb-0">The combined percentage of all allocations must stay at or below 100%.</p></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Save changes</button></div></form></div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
 <script>
 (() => {
- const labels=<?= json_encode(array_column($allocations,'allocation_name'),JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT) ?>;
- const values=<?= json_encode(array_map('floatval',array_column($allocations,'allocation_percentage'))) ?>;
+ const labels=<?= json_encode(array_column($allocations, 'allocation_name'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
+ const values=<?= json_encode(array_map('floatval', array_column($allocations, 'allocation_percentage'))) ?>;
  const remaining=<?= json_encode($remaining_percentage) ?>;
  if(remaining>0){labels.push('Unallocated');values.push(remaining);}
  const canvas=document.getElementById('allocationChart');
@@ -216,4 +230,4 @@ require_once __DIR__.'/../includes/header.php';
  });
 })();
 </script>
-<?php require_once __DIR__.'/../includes/footer.php';?>
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>

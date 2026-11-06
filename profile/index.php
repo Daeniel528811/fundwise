@@ -9,7 +9,8 @@ $user_id = (int) $_SESSION["user_id"];
 // The server validates the ISO-style code; the dropdown controls available choices.
 $default_currency_codes = ["PHP", "USD", "EUR", "GBP", "JPY", "AUD", "CAD", "SGD"];
 
-$securityFlash=$_SESSION['security_flash']??null;unset($_SESSION['security_flash']);
+$securityFlash = $_SESSION['security_flash'] ?? null;
+unset($_SESSION['security_flash']);
 $success = "";
 $error = "";
 
@@ -35,7 +36,7 @@ if (!$user) {
     die("User account not found.");
 }
 
-$currencyLocked=fw_currency_locked($conn,$user_id);
+$currencyLocked = fw_currency_locked($conn, $user_id);
 // Process profile update
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
@@ -238,7 +239,7 @@ require_once __DIR__ . "/../includes/header.php";
 
                 <h5 class="section-title mb-4">Personal Information</h5>
 
-                <form method="POST" action=""><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
+                <form method="POST" action=""><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
 
                     <input
                         type="hidden"
@@ -281,7 +282,7 @@ require_once __DIR__ . "/../includes/header.php";
                     <div class="mb-3">
                         <label class="form-label">Preferred Currency</label>
 
-                        <?php if(!$currencyLocked): ?><input
+                        <?php if (!$currencyLocked): ?><input
                             type="search"
                             id="currencySearch"
                             class="form-control mb-2"
@@ -300,14 +301,14 @@ require_once __DIR__ . "/../includes/header.php";
                             // Keep the saved choice usable even if the API is unavailable.
                             $initial_codes = array_unique(array_merge([$selected_currency], $default_currency_codes));
                             foreach ($initial_codes as $code):
-                            ?>
+                                ?>
                                 <option value="<?= htmlspecialchars($code, ENT_QUOTES, 'UTF-8') ?>"
                                     <?= $selected_currency === $code ? "selected" : "" ?>>
                                     <?= htmlspecialchars($code, ENT_QUOTES, 'UTF-8') ?>
                                 </option>
                             <?php endforeach; ?>
-                        </select><?php else: ?><div class="fw-locked-currency"><i class="bi bi-lock" aria-hidden="true"></i><strong><?= htmlspecialchars($selected_currency,ENT_QUOTES,'UTF-8') ?></strong><span>Record currency</span></div><?php endif; ?>
-                        <?php if($currencyLocked):?><input type="hidden" name="preferred_currency" value="<?= htmlspecialchars($selected_currency,ENT_QUOTES,'UTF-8') ?>"><?php endif;?><small id="currencyLoadStatus" class="muted-text d-block mt-1" role="status">
+                        </select><?php else: ?><div class="fw-locked-currency"><i class="bi bi-lock" aria-hidden="true"></i><strong><?= htmlspecialchars($selected_currency, ENT_QUOTES, 'UTF-8') ?></strong><span>Record currency</span></div><?php endif; ?>
+                        <?php if ($currencyLocked):?><input type="hidden" name="preferred_currency" value="<?= htmlspecialchars($selected_currency, ENT_QUOTES, 'UTF-8') ?>"><?php endif; ?><small id="currencyLoadStatus" class="muted-text d-block mt-1" role="status">
                             <?= $currencyLocked ? 'Existing records use this currency.' : 'Loading available currencies...' ?>
                         </small>
                         <div class="form-text">Choose the currency your recorded amounts use. After financial records exist, it is locked to prevent relabeling historical amounts. Currency Converter remains a separate reference tool.</div>
@@ -341,9 +342,9 @@ require_once __DIR__ . "/../includes/header.php";
             </div>
 
 <section class="settings-card mt-4" id="accountSecurity"><h2 class="fw-panel-title mb-3">Account security</h2>
-<?php if($securityFlash):?><div class="alert alert-<?= $securityFlash['ok']?'success':'danger' ?>" role="status"><?= htmlspecialchars($securityFlash['text'],ENT_QUOTES,'UTF-8') ?><?php if(isset($securityFlash['code'])):?><p class="mt-2 mb-1">Save this code now. It is shown once; never share it.</p><code class="fw-recovery-code"><?= htmlspecialchars($securityFlash['code'],ENT_QUOTES,'UTF-8') ?></code><?php endif;?></div><?php endif;?>
-<form method="post" action="security.php" class="fw-security-form"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'],ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="action" value="change_password"><div class="mb-3"><label class="form-label" for="currentPassword">Current password</label><div class="fw-password-wrap"><input id="currentPassword" name="current_password" type="password" class="form-control" autocomplete="current-password" required maxlength="72"><button type="button" class="fw-password-btn" data-fw-password-toggle="currentPassword" aria-label="Show password" title="Show password"><i class="bi bi-eye-slash" aria-hidden="true"></i></button></div></div><div class="row g-3"><div class="col-md-6"><label class="form-label" for="newPassword">New password</label><div class="fw-password-wrap"><input id="newPassword" name="new_password" type="password" class="form-control" autocomplete="new-password" minlength="8" maxlength="72" required><button type="button" class="fw-password-btn" data-fw-password-toggle="newPassword" aria-label="Show password" title="Show password"><i class="bi bi-eye-slash" aria-hidden="true"></i></button></div></div><div class="col-md-6"><label class="form-label" for="confirmPassword">Confirm new password</label><div class="fw-password-wrap"><input id="confirmPassword" name="confirm_password" type="password" class="form-control" autocomplete="new-password" minlength="8" maxlength="72" required><button type="button" class="fw-password-btn" data-fw-password-toggle="confirmPassword" aria-label="Show password" title="Show password"><i class="bi bi-eye-slash" aria-hidden="true"></i></button></div></div></div><p class="form-text mt-3">Use 8–72 characters. Changing your password signs out other sessions and replaces your recovery code.</p><button class="btn btn-purple fw-security-action" type="submit">Change password</button></form>
-<hr class="my-4"><h3 class="h6">Recovery code</h3><p class="text-muted small">Save your recovery code somewhere safe. You can use it to reset your password without email. Generating a new code replaces the old one.</p><form method="post" action="security.php"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'],ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="action" value="recovery_code"><label class="form-label" for="recoveryCurrentPassword">Confirm current password</label><div class="fw-password-wrap mb-3"><input id="recoveryCurrentPassword" name="current_password" type="password" class="form-control" autocomplete="current-password" required maxlength="72"><button type="button" class="fw-password-btn" data-fw-password-toggle="recoveryCurrentPassword" aria-label="Show password" title="Show password"><i class="bi bi-eye-slash" aria-hidden="true"></i></button></div><button class="btn btn-outline-primary fw-security-action" type="submit">Generate recovery code</button></form><p class="form-text mt-3">Account recovery uses your saved recovery code. Password reset emails are currently unavailable.</p></section>
+<?php if ($securityFlash):?><div class="alert alert-<?= $securityFlash['ok'] ? 'success' : 'danger' ?>" role="status"><?= htmlspecialchars($securityFlash['text'], ENT_QUOTES, 'UTF-8') ?><?php if (isset($securityFlash['code'])):?><p class="mt-2 mb-1">Save this code now. It is shown once; never share it.</p><code class="fw-recovery-code"><?= htmlspecialchars($securityFlash['code'], ENT_QUOTES, 'UTF-8') ?></code><?php endif; ?></div><?php endif; ?>
+<form method="post" action="security.php" class="fw-security-form"><?php fw_form_tokens(); ?><input type="hidden" name="action" value="change_password"><div class="mb-3"><label class="form-label" for="currentPassword">Current password</label><?php fw_password_field('currentPassword', 'current_password', ['autocomplete' => 'current-password', 'maxlength' => '72', 'required' => true]); ?></div><div class="row g-3"><div class="col-md-6"><label class="form-label" for="newPassword">New password</label><?php fw_password_field('newPassword', 'new_password', ['autocomplete' => 'new-password', 'minlength' => '8', 'maxlength' => '72', 'required' => true]); ?></div><div class="col-md-6"><label class="form-label" for="confirmPassword">Confirm new password</label><?php fw_password_field('confirmPassword', 'confirm_password', ['autocomplete' => 'new-password', 'minlength' => '8', 'maxlength' => '72', 'required' => true]); ?></div></div><p class="form-text mt-3">Use 8–72 characters. Changing your password signs out other sessions and replaces your recovery code.</p><button class="btn btn-purple fw-security-action" type="submit">Change password</button></form>
+<hr class="my-4"><h3 class="h6">Recovery code</h3><p class="text-muted small">Save your recovery code somewhere safe. You can use it to reset your password without email. Generating a new code replaces the old one.</p><form method="post" action="security.php"><?php fw_form_tokens(); ?><input type="hidden" name="action" value="recovery_code"><label class="form-label" for="recoveryCurrentPassword">Confirm current password</label><?php fw_password_field('recoveryCurrentPassword', 'current_password', ['autocomplete' => 'current-password', 'maxlength' => '72', 'required' => true], 'mb-3'); ?><button class="btn btn-outline-primary fw-security-action" type="submit">Generate recovery code</button></form><p class="form-text mt-3">Account recovery uses your saved recovery code. Password reset emails are currently unavailable.</p></section>
 
             
 
@@ -414,5 +415,5 @@ require_once __DIR__ . "/../includes/header.php";
 })();
 </script>
 
-<section class="card mt-4 mb-4 fw-profile-session"><div class="card-body"><h2 class="h5">Your session</h2><p class="text-muted">Sign out of Fundwise on this device.</p><form method="post" action="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/auth/logout.php"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'],ENT_QUOTES,'UTF-8') ?>"><button class="btn btn-outline-danger" type="submit"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Log out</button></form></div></section>
+<section class="card mt-4 mb-4 fw-profile-session"><div class="card-body"><h2 class="h5">Your session</h2><p class="text-muted">Sign out of Fundwise on this device.</p><form method="post" action="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/auth/logout.php"><?php fw_form_tokens(); ?><button class="btn btn-outline-danger" type="submit"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Log out</button></form></div></section>
 <?php require_once __DIR__ . "/../includes/footer.php"; ?>

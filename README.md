@@ -103,3 +103,5 @@ Screenshots show synthetic local test accounts, not real customer data or proof 
 ## Developer and AI assistance
 
 **Daeniel Abujen / Daeniel528811** - individual project developer and submission owner. AI assistance was used for code suggestions, debugging, refinements, testing support and documentation. The student must understand and verify submitted code and comply with the course's AI-use policy; this repository does not establish that understanding. No AI assistance should be used to answer the actual defense.
+
+Maintenance and shared components are documented in [docs/MAINTAINABILITY.md](docs/MAINTAINABILITY.md). The November 6 refactor retains Update3 behavior and includes [regression evidence](docs/testing/refactor-results.json).

@@ -6,27 +6,27 @@ if (BASE_URL !== '' && strpos($__path, BASE_URL) === 0) {
 }
 $__navSections = [
     'Main menu' => [
-        ['Dashboard','/index.php','bi-grid-1x2','/index.php'],
-        ['Transactions','/transactions/','bi-arrow-left-right','/transactions/index.php'],
-        ['Categories','/categories/','bi-grid','/categories/index.php'],
-        ['Budgets','/budgets/','bi-pie-chart','/budgets/index.php'],
+        ['Dashboard', '/index.php', 'bi-grid-1x2', '/index.php'],
+        ['Transactions', '/transactions/', 'bi-arrow-left-right', '/transactions/index.php'],
+        ['Categories', '/categories/', 'bi-grid', '/categories/index.php'],
+        ['Budgets', '/budgets/', 'bi-pie-chart', '/budgets/index.php'],
     ],
     'Plan & grow' => [
-        ['Savings Goals','/savings/','bi-bullseye','/savings/index.php'],
-        ['Savings Challenges','/savings/challenges.php','bi-trophy','/savings/challenges.php'],
-        ['Savings Allocation','/savings/allocations.php','bi-diagram-3','/savings/allocations.php'],
+        ['Savings Goals', '/savings/', 'bi-bullseye', '/savings/index.php'],
+        ['Savings Challenges', '/savings/challenges.php', 'bi-trophy', '/savings/challenges.php'],
+        ['Savings Allocation', '/savings/allocations.php', 'bi-diagram-3', '/savings/allocations.php'],
     ],
     'Financial intelligence' => [
-        ['Money Lab','/insights/money-lab.php','bi-flask','/insights/money-lab.php'],
-        ['Purchase Map','/insights/purchase-map.php','bi-signpost-split','/insights/purchase-map.php'],
-        ['Debts & Loans','/debts/','bi-wallet2','/debts/index.php'],
-        ['Real Earnings Lens','/insights/earnings.php','bi-briefcase','/insights/earnings.php'],
+        ['Money Lab', '/insights/money-lab.php', 'bi-flask', '/insights/money-lab.php'],
+        ['Purchase Map', '/insights/purchase-map.php', 'bi-signpost-split', '/insights/purchase-map.php'],
+        ['Debts & Loans', '/debts/', 'bi-wallet2', '/debts/index.php'],
+        ['Real Earnings Lens', '/insights/earnings.php', 'bi-briefcase', '/insights/earnings.php'],
     ],
     'Insights & tools' => [
-        ['Reports','/reports/','bi-bar-chart-line','/reports/index.php'],
-        ['Currency Converter','/currency/','bi-arrow-left-right','/currency/index.php'],
-        ['Notifications','/notifications/','bi-bell','/notifications/index.php'],
-        ['Profile & Settings','/profile/','bi-gear','/profile/index.php'],
+        ['Reports', '/reports/', 'bi-bar-chart-line', '/reports/index.php'],
+        ['Currency Converter', '/currency/', 'bi-arrow-left-right', '/currency/index.php'],
+        ['Notifications', '/notifications/', 'bi-bell', '/notifications/index.php'],
+        ['Profile & Settings', '/profile/', 'bi-gear', '/profile/index.php'],
     ],
 ];
 ?>
@@ -48,7 +48,7 @@ $__navSections = [
     <?php endforeach; ?>
 </nav>
 <div class="fw-nav-bottom">
-    <form method="post" action="<?= $__esc(BASE_URL . '/auth/logout.php') ?>"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
+    <form method="post" action="<?= $__esc(BASE_URL . '/auth/logout.php') ?>"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
         <input type="hidden" name="csrf_token" value="<?= $__esc($_SESSION['csrf_token']) ?>">
         <button type="submit" class="fw-nav-link fw-nav-logout text-start">
             <i class="bi bi-box-arrow-right" aria-hidden="true"></i><span class="fw-nav-text">Log out</span>

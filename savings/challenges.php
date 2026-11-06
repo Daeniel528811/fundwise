@@ -15,12 +15,16 @@ $csrf_token = $_SESSION["csrf_token"];
 $message = "";
 $error = "";
 
-function validChallengeDate($value) {
+function validChallengeDate($value)
+{
     return fw_valid_date($value);
 }
 
-function getChallengeStatus($current, $target, $end_date, $start_date = null) {
-    if ($start_date !== null && $start_date > date('Y-m-d')) return 'scheduled';
+function getChallengeStatus($current, $target, $end_date, $start_date = null)
+{
+    if ($start_date !== null && $start_date > date('Y-m-d')) {
+        return 'scheduled';
+    }
     if ($current >= $target) {
         return "completed";
     }
@@ -33,9 +37,14 @@ function getChallengeStatus($current, $target, $end_date, $start_date = null) {
 }
 
 // Goal-linked progress is derived from dated contributions, never a second balance.
-if(fw_has_table($conn,'fw_challenge_goals')){
- $linked=fw_query($conn,"SELECT c.*,l.goal_id FROM savings_challenges c JOIN fw_challenge_goals l ON l.challenge_id=c.challenge_id AND l.user_id=c.user_id WHERE c.user_id=?",'i',[$user_id]);
- foreach($linked as $lc){$saved=fw_query($conn,"SELECT COALESCE(SUM(CASE WHEN contribution_type='deposit' THEN amount ELSE -amount END),0) AS amount FROM savings_contributions WHERE goal_id=? AND contribution_date BETWEEN ? AND LEAST(?,CURDATE())",'iss',[(int)$lc['goal_id'],$lc['start_date'],$lc['end_date']])[0]['amount'];$current=max(0,(float)$saved);$status=getChallengeStatus($current,(float)$lc['target_amount'],$lc['end_date'],$lc['start_date']);fw_query($conn,'UPDATE savings_challenges SET current_amount=?,status=? WHERE challenge_id=? AND user_id=?','ssii',[(string)$current,$status,(int)$lc['challenge_id'],$user_id]);}
+if (fw_has_table($conn, 'fw_challenge_goals')) {
+    $linked = fw_query($conn, "SELECT c.*,l.goal_id FROM savings_challenges c JOIN fw_challenge_goals l ON l.challenge_id=c.challenge_id AND l.user_id=c.user_id WHERE c.user_id=?", 'i', [$user_id]);
+    foreach ($linked as $lc) {
+        $saved = fw_query($conn, "SELECT COALESCE(SUM(CASE WHEN contribution_type='deposit' THEN amount ELSE -amount END),0) AS amount FROM savings_contributions WHERE goal_id=? AND contribution_date BETWEEN ? AND LEAST(?,CURDATE())", 'iss', [(int) $lc['goal_id'], $lc['start_date'], $lc['end_date']])[0]['amount'];
+        $current = max(0, (float) $saved);
+        $status = getChallengeStatus($current, (float) $lc['target_amount'], $lc['end_date'], $lc['start_date']);
+        fw_query($conn, 'UPDATE savings_challenges SET current_amount=?,status=? WHERE challenge_id=? AND user_id=?', 'ssii', [(string) $current, $status, (int) $lc['challenge_id'], $user_id]);
+    }
 }
 // Handle form submissions
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
@@ -95,7 +104,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
         // UPDATE CHALLENGE PROGRESS
-        if ($action === "progress" && fw_has_table($conn,'fw_challenge_goals') && fw_query($conn,'SELECT challenge_id FROM fw_challenge_goals WHERE challenge_id=? AND user_id=?','ii',[fw_positive_id($_POST['challenge_id']??null),$user_id])){$error='This challenge uses goal contributions. Add or correct a dated contribution in Savings Goals to update its progress.';$action='';}
+        if ($action === "progress" && fw_has_table($conn, 'fw_challenge_goals') && fw_query($conn, 'SELECT challenge_id FROM fw_challenge_goals WHERE challenge_id=? AND user_id=?', 'ii', [fw_positive_id($_POST['challenge_id'] ?? null), $user_id])) {
+            $error = 'This challenge uses goal contributions. Add or correct a dated contribution in Savings Goals to update its progress.';
+            $action = '';
+        }
         if ($action === "progress") {
             $challenge_id = (filter_var($_POST["challenge_id"] ?? null, FILTER_VALIDATE_INT) ?: 0);
             $current = fw_money($_POST["current_amount"] ?? null, true);
@@ -124,7 +136,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $status = getChallengeStatus(
                     $current,
                     (float) $challenge["target_amount"],
-                    $challenge["end_date"], $challenge["start_date"]
+                    $challenge["end_date"],
+                    $challenge["start_date"]
                 );
 
                 $stmt = mysqli_prepare($conn, "
@@ -154,9 +167,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
         // EDIT CHALLENGE DETAILS
-        if ($action === "edit" && fw_has_table($conn,'fw_challenge_goals')){
-            $cl=fw_query($conn,'SELECT goal_id FROM fw_challenge_goals WHERE challenge_id=? AND user_id=?','ii',[fw_positive_id($_POST['challenge_id']??null),$user_id])[0]??null;
-            if($cl&&fw_query($conn,'SELECT c.challenge_id FROM savings_challenges c JOIN fw_challenge_goals l ON l.challenge_id=c.challenge_id AND l.user_id=c.user_id WHERE c.user_id=? AND l.goal_id=? AND c.challenge_id<>? AND c.start_date<=? AND c.end_date>=?','iiiss',[$user_id,(int)$cl['goal_id'],fw_positive_id($_POST['challenge_id']??null),fw_text($_POST['end_date']??null),fw_text($_POST['start_date']??null)])){$error='Those dates overlap another challenge linked to the same goal.';$action='';}
+        if ($action === "edit" && fw_has_table($conn, 'fw_challenge_goals')) {
+            $cl = fw_query($conn, 'SELECT goal_id FROM fw_challenge_goals WHERE challenge_id=? AND user_id=?', 'ii', [fw_positive_id($_POST['challenge_id'] ?? null), $user_id])[0] ?? null;
+            if ($cl && fw_query($conn, 'SELECT c.challenge_id FROM savings_challenges c JOIN fw_challenge_goals l ON l.challenge_id=c.challenge_id AND l.user_id=c.user_id WHERE c.user_id=? AND l.goal_id=? AND c.challenge_id<>? AND c.start_date<=? AND c.end_date>=?', 'iiiss', [$user_id, (int) $cl['goal_id'], fw_positive_id($_POST['challenge_id'] ?? null), fw_text($_POST['end_date'] ?? null), fw_text($_POST['start_date'] ?? null)])) {
+                $error = 'Those dates overlap another challenge linked to the same goal.';
+                $action = '';
+            }
         }
         if ($action === "edit") {
             $challenge_id = (filter_var($_POST["challenge_id"] ?? null, FILTER_VALIDATE_INT) ?: 0);
@@ -273,7 +289,8 @@ while ($row = mysqli_fetch_assoc($result)) {
     $calculated_status = getChallengeStatus(
         (float) $row["current_amount"],
         (float) $row["target_amount"],
-        $row["end_date"], $row["start_date"]
+        $row["end_date"],
+        $row["start_date"]
     );
 
     if ($row["status"] !== $calculated_status) {
@@ -309,7 +326,7 @@ $completed_count = 0;
 $total_progress = 0;
 
 foreach ($challenges as $challenge) {
-    if (in_array($challenge["status"], ["active","scheduled"], true)) {
+    if (in_array($challenge["status"], ["active", "scheduled"], true)) {
         $active_count++;
     } elseif ($challenge["status"] === "completed") {
         $completed_count++;
@@ -465,7 +482,7 @@ require_once __DIR__ . "/../includes/header.php";
             <div class="form-card mb-4">
                 <h5 class="section-title mb-3">Create a New Challenge</h5>
 
-                <form method="POST"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
+                <form method="POST"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
                     <input type="hidden" name="csrf_token"
                            value="<?= htmlspecialchars($csrf_token) ?>">
                     <input type="hidden" name="action" value="create">
@@ -580,7 +597,7 @@ require_once __DIR__ . "/../includes/header.php";
                                 <div class="progress mb-3">
                                     <div class="progress-bar"
                                          role="progressbar"
-                                         style="width: <?= min(100,$percentage) ?>%">
+                                         style="width: <?= min(100, $percentage) ?>%">
                                     </div>
                                 </div>
 
@@ -606,10 +623,11 @@ require_once __DIR__ . "/../includes/header.php";
                                 <hr>
 
                                 <!-- UPDATE PROGRESS -->
-                                <?php $goalLink=fw_has_table($conn,'fw_challenge_goals')?(fw_query($conn,'SELECT l.*,g.goal_name FROM fw_challenge_goals l JOIN savings_goals g ON g.goal_id=l.goal_id AND g.user_id=l.user_id WHERE l.challenge_id=? AND l.user_id=?','ii',[(int)$challenge['challenge_id'],$user_id])[0]??null):null;if($goalLink):?>
-                                <p><strong><?= htmlspecialchars($goalLink['behavior'],ENT_QUOTES,'UTF-8') ?></strong></p><p class="text-muted">Progress comes from dated contributions to <?= htmlspecialchars($goalLink['goal_name'],ENT_QUOTES,'UTF-8') ?> during this challenge. It is already included in your goal balance.</p><a class="btn btn-outline-primary mb-3" href="index.php">Record a goal contribution</a>
+                                <?php $goalLink = fw_has_table($conn, 'fw_challenge_goals') ? (fw_query($conn, 'SELECT l.*,g.goal_name FROM fw_challenge_goals l JOIN savings_goals g ON g.goal_id=l.goal_id AND g.user_id=l.user_id WHERE l.challenge_id=? AND l.user_id=?', 'ii', [(int) $challenge['challenge_id'], $user_id])[0] ?? null) : null;
+                        if ($goalLink):?>
+                                <p><strong><?= htmlspecialchars($goalLink['behavior'], ENT_QUOTES, 'UTF-8') ?></strong></p><p class="text-muted">Progress comes from dated contributions to <?= htmlspecialchars($goalLink['goal_name'], ENT_QUOTES, 'UTF-8') ?> during this challenge. It is already included in your goal balance.</p><a class="btn btn-outline-primary mb-3" href="index.php">Record a goal contribution</a>
                                 <?php else:?>
-                                <form method="POST" class="mb-3"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
+                                <form method="POST" class="mb-3"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
                                     <input type="hidden" name="csrf_token"
                                            value="<?= htmlspecialchars($csrf_token) ?>">
                                     <input type="hidden" name="action" value="progress">
@@ -641,7 +659,7 @@ require_once __DIR__ . "/../includes/header.php";
                                         Enter your new total saved amount for this challenge.
                                     </small>
                                 </form>
-                                <?php endif;?>
+                                <?php endif; ?>
 
                                 <!-- EDIT DETAILS -->
                                 <details class="mb-3">
@@ -649,7 +667,7 @@ require_once __DIR__ . "/../includes/header.php";
                                         Edit Challenge Details
                                     </summary>
 
-                                    <form method="POST" class="mt-3"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
+                                    <form method="POST" class="mt-3"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
                                         <input type="hidden" name="csrf_token"
                                                value="<?= htmlspecialchars($csrf_token) ?>">
                                         <input type="hidden" name="action" value="edit">
@@ -690,7 +708,7 @@ require_once __DIR__ . "/../includes/header.php";
 
                                 <!-- DELETE -->
                                 <form method="POST"
-                                      onsubmit="return confirm('Are you sure you want to delete this challenge?');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
+                                      onsubmit="return confirm('Are you sure you want to delete this challenge?');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
 
                                     <input type="hidden" name="csrf_token"
                                            value="<?= htmlspecialchars($csrf_token) ?>">

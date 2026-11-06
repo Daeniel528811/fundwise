@@ -79,7 +79,9 @@ function deleteReceiptFile($receipt_path)
     }
 
     $filename = basename((string) $receipt_path);
-    if (!preg_match('/^[a-f0-9]{32}\.(?:png|jpg)$/D', $filename)) return;
+    if (!preg_match('/^[a-f0-9]{32}\.(?:png|jpg)$/D', $filename)) {
+        return;
+    }
     $full_path = "../uploads/receipts/" . $filename;
 
     if (is_file($full_path)) {
@@ -88,9 +90,21 @@ function deleteReceiptFile($receipt_path)
 }
 
 // Validate explicit spending labels before any transaction mutation.
-$labelError='';if($_SERVER['REQUEST_METHOD']==='POST'){try{fw_label($_POST['spending_label']??'');}catch(InvalidArgumentException $e){$labelError=$e->getMessage();}}
-if($_SERVER['REQUEST_METHOD']==='POST'&&fw_has_table($conn,'fw_work_cost_links')&&fw_query($conn,'SELECT expense_id FROM fw_work_cost_links WHERE transaction_id=? AND user_id=?','ii',[fw_positive_id($_POST['transaction_id']??null),$user_id]))$labelError='This expense is linked to a work session. Open Real Earnings Lens → Manage transaction links and unlink it before editing or deleting.';
-if($labelError!==''){$message=$labelError;$message_type='danger';}
+$labelError = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        fw_label($_POST['spending_label'] ?? '');
+    } catch (InvalidArgumentException $e) {
+        $labelError = $e->getMessage();
+    }
+}
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && fw_has_table($conn, 'fw_work_cost_links') && fw_query($conn, 'SELECT expense_id FROM fw_work_cost_links WHERE transaction_id=? AND user_id=?', 'ii', [fw_positive_id($_POST['transaction_id'] ?? null), $user_id])) {
+    $labelError = 'This expense is linked to a work session. Open Real Earnings Lens → Manage transaction links and unlink it before editing or deleting.';
+}
+if ($labelError !== '') {
+    $message = $labelError;
+    $message_type = 'danger';
+}
 // Handle form submissions
 if ($_SERVER["REQUEST_METHOD"] === "POST" && $labelError === "") {
 
@@ -269,7 +283,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && $labelError === "") {
                         );
                     }
 
-                    if (fw_execute_transaction_change($conn,$stmt,$user_id,$transaction_id,$old_transaction ?? null)) {
+                    if (fw_execute_transaction_change($conn, $stmt, $user_id, $transaction_id, $old_transaction ?? null)) {
 
                         mysqli_stmt_close($stmt);
 
@@ -335,7 +349,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && $labelError === "") {
             $delete_stmt = mysqli_prepare($conn, $delete_sql);
             mysqli_stmt_bind_param($delete_stmt, "ii", $transaction_id, $user_id);
 
-            if (fw_execute_transaction_change($conn,$delete_stmt,$user_id,$transaction_id,$transaction,true)) {
+            if (fw_execute_transaction_change($conn, $delete_stmt, $user_id, $transaction_id, $transaction, true)) {
 
                 deleteReceiptFile($transaction["receipt_image"]);
 
@@ -497,11 +511,14 @@ if ($search !== "") {
     $types .= "ss";
 }
 
-$page=max(1,min(100000,(int)($_GET['page']??1))); $pageSize=50;
-$countStmt=mysqli_prepare($conn,'SELECT COUNT(*) AS total FROM ('.$sql.') AS filtered');
-mysqli_stmt_bind_param($countStmt,$types,...$params);mysqli_stmt_execute($countStmt);
-$filteredTotal=(int)mysqli_fetch_assoc(mysqli_stmt_get_result($countStmt))['total'];mysqli_stmt_close($countStmt);
-$sql .= " ORDER BY t.transaction_date DESC, t.transaction_id DESC LIMIT 50 OFFSET ".(($page-1)*50);
+$page = max(1, min(100000, (int) ($_GET['page'] ?? 1)));
+$pageSize = 50;
+$countStmt = mysqli_prepare($conn, 'SELECT COUNT(*) AS total FROM (' . $sql . ') AS filtered');
+mysqli_stmt_bind_param($countStmt, $types, ...$params);
+mysqli_stmt_execute($countStmt);
+$filteredTotal = (int) mysqli_fetch_assoc(mysqli_stmt_get_result($countStmt))['total'];
+mysqli_stmt_close($countStmt);
+$sql .= " ORDER BY t.transaction_date DESC, t.transaction_id DESC LIMIT 50 OFFSET " . (($page - 1) * 50);
 
 $transaction_stmt = mysqli_prepare($conn, $sql);
 mysqli_stmt_bind_param($transaction_stmt, $types, ...$params);
@@ -708,7 +725,7 @@ require_once __DIR__ . "/../includes/header.php";
 
         <?php else: ?>
 
-            <form method="POST" enctype="multipart/form-data"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
+            <form method="POST" enctype="multipart/form-data"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
 
                 <input type="hidden" name="csrf_token"
                        value="<?php echo htmlspecialchars($_SESSION["csrf_token"]); ?>">
@@ -785,7 +802,7 @@ require_once __DIR__ . "/../includes/header.php";
                                required>
                     </div>
 
-                    <div class="col-12"><label for="spending_label" class="form-label">Spending label (optional)</label><?php $savedLabel=$edit_transaction&&fw_has_table($conn,'fw_spending_labels')?(fw_query($conn,'SELECT label FROM fw_spending_labels WHERE transaction_id=? AND user_id=?','ii',[(int)$edit_transaction['transaction_id'],$user_id])[0]['label']??''):''; ?><datalist id="transactionLabels"><?php if(fw_has_table($conn,'fw_spending_labels')):foreach(fw_query($conn,"SELECT DISTINCT label FROM fw_spending_labels WHERE user_id=? AND label<>'' ORDER BY label",'i',[$user_id]) as $labelOption):?><option value="<?= htmlspecialchars($labelOption['label'],ENT_QUOTES,'UTF-8') ?>"><?php endforeach;endif;?></datalist><input id="spending_label" name="spending_label" maxlength="60" class="form-control" placeholder="Choose or type a spending label" list="transactionLabels" value="<?= htmlspecialchars($_POST['spending_label']??$savedLabel,ENT_QUOTES,'UTF-8') ?>"><p class="form-text">A spending label groups purchases for Money Lab. It is separate from the description below. Split mixed purchases into separate amounts.</p></div>
+                    <div class="col-12"><label for="spending_label" class="form-label">Spending label (optional)</label><?php $savedLabel = $edit_transaction && fw_has_table($conn, 'fw_spending_labels') ? (fw_query($conn, 'SELECT label FROM fw_spending_labels WHERE transaction_id=? AND user_id=?', 'ii', [(int) $edit_transaction['transaction_id'], $user_id])[0]['label'] ?? '') : ''; ?><datalist id="transactionLabels"><?php if (fw_has_table($conn, 'fw_spending_labels')):foreach (fw_query($conn, "SELECT DISTINCT label FROM fw_spending_labels WHERE user_id=? AND label<>'' ORDER BY label", 'i', [$user_id]) as $labelOption):?><option value="<?= htmlspecialchars($labelOption['label'], ENT_QUOTES, 'UTF-8') ?>"><?php endforeach; endif; ?></datalist><input id="spending_label" name="spending_label" maxlength="60" class="form-control" placeholder="Choose or type a spending label" list="transactionLabels" value="<?= htmlspecialchars($_POST['spending_label'] ?? $savedLabel, ENT_QUOTES, 'UTF-8') ?>"><p class="form-text">A spending label groups purchases for Money Lab. It is separate from the description below. Split mixed purchases into separate amounts.</p></div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Description *</label><small class="d-block text-muted mb-2">Describe this individual transaction.</small>
 
@@ -967,7 +984,8 @@ require_once __DIR__ . "/../includes/header.php";
                                 </td>
 
                                 <td>
-                                    <?php echo htmlspecialchars($transaction["description"]); ?><?php if(fw_has_table($conn,'fw_spending_labels')):$tl=fw_query($conn,'SELECT label FROM fw_spending_labels WHERE transaction_id=? AND user_id=?','ii',[(int)$transaction['transaction_id'],$user_id])[0]['label']??'';if($tl!==''):?><small class="d-block text-muted">Label: <?= htmlspecialchars($tl,ENT_QUOTES,'UTF-8') ?></small><?php endif;endif;?>
+                                    <?php echo htmlspecialchars($transaction["description"]); ?><?php if (fw_has_table($conn, 'fw_spending_labels')):$tl = fw_query($conn, 'SELECT label FROM fw_spending_labels WHERE transaction_id=? AND user_id=?', 'ii', [(int) $transaction['transaction_id'], $user_id])[0]['label'] ?? '';
+                                        if ($tl !== ''):?><small class="d-block text-muted">Label: <?= htmlspecialchars($tl, ENT_QUOTES, 'UTF-8') ?></small><?php endif; endif; ?>
                                 </td>
 
                                 <td>
@@ -1012,7 +1030,7 @@ require_once __DIR__ . "/../includes/header.php";
                                         </a>
 
                                         <form method="POST"
-                                              onsubmit="return confirm('Are you sure you want to delete this transaction?');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
+                                              onsubmit="return confirm('Are you sure you want to delete this transaction?');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
 
                                             <input type="hidden" name="csrf_token"
                                                    value="<?php echo htmlspecialchars($_SESSION["csrf_token"]); ?>">
@@ -1093,10 +1111,12 @@ transactionType.addEventListener("change", filterCategories);
 filterCategories();
 </script>
 
-<?php if($page>1||$filteredTotal>50):?><nav class="fw-pagination" aria-label="Transaction pages"><?php $pageQuery=$_GET; unset($pageQuery['edit']); if($page>1):$pageQuery['page']=$page-1;?><a class="btn btn-outline-primary" href="?<?= htmlspecialchars(http_build_query($pageQuery),ENT_QUOTES,'UTF-8') ?>">Previous</a><?php endif;?> <span>Page <?= $page ?></span><?php if($page*50<$filteredTotal):$pageQuery['page']=$page+1;?><a class="btn btn-outline-primary" href="?<?= htmlspecialchars(http_build_query($pageQuery),ENT_QUOTES,'UTF-8') ?>">Next</a><?php endif;?></nav><?php endif;?>
+<?php if ($page > 1 || $filteredTotal > 50):?><nav class="fw-pagination" aria-label="Transaction pages"><?php $pageQuery = $_GET;
+    unset($pageQuery['edit']);
+    if ($page > 1):$pageQuery['page'] = $page - 1; ?><a class="btn btn-outline-primary" href="?<?= htmlspecialchars(http_build_query($pageQuery), ENT_QUOTES, 'UTF-8') ?>">Previous</a><?php endif; ?> <span>Page <?= $page ?></span><?php if ($page * 50 < $filteredTotal):$pageQuery['page'] = $page + 1; ?><a class="btn btn-outline-primary" href="?<?= htmlspecialchars(http_build_query($pageQuery), ENT_QUOTES, 'UTF-8') ?>">Next</a><?php endif; ?></nav><?php endif; ?>
 <?php require_once __DIR__ . "/../includes/footer.php"; ?>
 
 <?php
-mysqli_stmt_close($transaction_stmt);
+    mysqli_stmt_close($transaction_stmt);
 mysqli_stmt_close($totals_stmt);
 ?>

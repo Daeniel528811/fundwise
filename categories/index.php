@@ -11,7 +11,8 @@ if (empty($_SESSION["categories_csrf_token"])) {
 }
 $csrf_token = $_SESSION["categories_csrf_token"];
 
-function categoryUsageCount(mysqli $conn, int $category_id, int $user_id): int {
+function categoryUsageCount(mysqli $conn, int $category_id, int $user_id): int
+{
     $stmt = mysqli_prepare($conn, "
         SELECT
             (SELECT COUNT(*) FROM transactions WHERE category_id = ? AND user_id = ?) +
@@ -40,13 +41,14 @@ function categoryUsageCount(mysqli $conn, int $category_id, int $user_id): int {
             mysqli_stmt_execute($labStmt);
             $labRow = mysqli_fetch_assoc(mysqli_stmt_get_result($labStmt));
             mysqli_stmt_close($labStmt);
-            $used += (int)($labRow['total'] ?? 0);
+            $used += (int) ($labRow['total'] ?? 0);
         }
     }
     return $used;
 }
 
-function categoryDuplicate(mysqli $conn, int $user_id, string $name, string $type, int $ignore_id = 0): bool {
+function categoryDuplicate(mysqli $conn, int $user_id, string $name, string $type, int $ignore_id = 0): bool
+{
     $stmt = mysqli_prepare($conn, "
         SELECT category_id FROM categories
         WHERE user_id = ? AND category_name = ? AND category_type = ? AND category_id <> ?
@@ -179,10 +181,10 @@ require_once __DIR__ . "/../includes/header.php";
     </div>
     <?php if ($message !== ''): ?><div class="alert alert-<?= htmlspecialchars($message_type, ENT_QUOTES, 'UTF-8') ?> mt-3" role="status"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
 
-    <details class="fi-panel fi-details mt-4" id="addCategoryPanel" <?= $message_type==='danger' && !$edit_category?'open':'' ?>>
+    <details class="fi-panel fi-details mt-4" id="addCategoryPanel" <?= $message_type === 'danger' && !$edit_category ? 'open' : '' ?>>
         <summary class="fi-details-summary"><span><i class="bi bi-plus-circle me-2"></i> Add a new category</span><i class="bi bi-chevron-down"></i></summary>
         <div class="fi-divider"></div>
-        <form method="post" class="row g-3 align-items-end"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
+        <form method="post" class="row g-3 align-items-end"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
             <div class="col-md-6"><label class="form-label" for="newCategoryName">Category name</label><input id="newCategoryName" type="text" name="category_name" maxlength="100" class="form-control" placeholder="e.g. Transportation" required></div>
             <div class="col-md-3"><label class="form-label" for="newCategoryType">Category type</label><select id="newCategoryType" name="category_type" class="form-select" required><option value="expense">Expense</option><option value="income">Income</option></select></div>
@@ -193,27 +195,27 @@ require_once __DIR__ . "/../includes/header.php";
     <?php if ($edit_category): ?>
     <section class="fi-panel mt-3" id="editCategoryPanel" aria-labelledby="editCategoryTitle">
         <div class="fi-panel-heading"><div><span class="fi-mini-eyebrow">EDIT CATEGORY</span><h2 id="editCategoryTitle"><?= htmlspecialchars($edit_category['category_name'], ENT_QUOTES, 'UTF-8') ?></h2></div><a class="btn btn-sm btn-outline-secondary" href="index.php">Cancel</a></div>
-        <form method="post" class="row g-3 align-items-end"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
+        <form method="post" class="row g-3 align-items-end"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
-            <input type="hidden" name="category_id" value="<?= (int)$edit_category['category_id'] ?>">
+            <input type="hidden" name="category_id" value="<?= (int) $edit_category['category_id'] ?>">
             <div class="col-md-6"><label class="form-label" for="editCategoryName">Category name</label><input id="editCategoryName" type="text" name="category_name" maxlength="100" class="form-control" value="<?= htmlspecialchars($edit_category['category_name'], ENT_QUOTES, 'UTF-8') ?>" required></div>
-            <div class="col-md-3"><label class="form-label" for="editCategoryType">Type</label><select id="editCategoryType" name="category_type" class="form-select"><option value="expense" <?= $edit_category['category_type']==='expense'?'selected':'' ?>>Expense</option><option value="income" <?= $edit_category['category_type']==='income'?'selected':'' ?>>Income</option></select></div>
+            <div class="col-md-3"><label class="form-label" for="editCategoryType">Type</label><select id="editCategoryType" name="category_type" class="form-select"><option value="expense" <?= $edit_category['category_type'] === 'expense' ? 'selected' : '' ?>>Expense</option><option value="income" <?= $edit_category['category_type'] === 'income' ? 'selected' : '' ?>>Income</option></select></div>
             <div class="col-md-3"><button type="submit" name="edit_category" value="1" class="btn btn-primary w-100">Save changes</button></div>
         </form><p class="fi-subtext mb-0 mt-2">Categories used by transactions, budgets, or Money Lab can be renamed but cannot change type.</p>
     </section>
     <?php elseif ($edit_id > 0): ?><div class="alert alert-warning mt-3">Category not found or you do not have permission to edit it.</div><?php endif; ?>
 
     <div class="row g-4 mt-1">
-        <?php foreach ([['Income categories',$income_categories,'bi-arrow-down-left-circle','success'], ['Expense categories',$expense_categories,'bi-arrow-up-right-circle','danger']] as [$heading,$items,$icon,$tint]): ?>
+        <?php foreach ([['Income categories', $income_categories, 'bi-arrow-down-left-circle', 'success'], ['Expense categories', $expense_categories, 'bi-arrow-up-right-circle', 'danger']] as [$heading,$items,$icon,$tint]): ?>
         <div class="col-lg-6"><section class="fi-panel h-100"><div class="fi-panel-heading"><div><span class="fi-mini-eyebrow"><?= count($items) ?> CATEGORIES</span><h2><i class="bi <?= $icon ?> me-2 text-<?= $tint ?>"></i><?= htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') ?></h2></div></div>
             <?php if (!$items): ?><div class="fi-empty"><i class="bi bi-grid"></i><p>No categories added yet.</p></div><?php endif; ?>
             <?php foreach ($items as $category): ?>
             <div class="fi-category-row">
                 <div class="fi-category-icon"><i class="bi <?= $icon ?>"></i></div>
-                <div class="fi-category-name"><strong><?= htmlspecialchars($category['category_name'], ENT_QUOTES, 'UTF-8') ?></strong><span><?= $category['is_default']?'Default category':'Custom category' ?></span></div>
-                <div class="fi-category-actions"><a class="btn btn-sm btn-outline-primary" href="?edit=<?= (int)$category['category_id'] ?>#editCategoryPanel"><i class="bi bi-pencil me-1"></i> Edit</a>
-                    <form method="post" onsubmit="return confirm('Delete this category? Categories in use by transactions, budgets, or Money Lab cannot be deleted.');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
-                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="category_id" value="<?= (int)$category['category_id'] ?>"><button type="submit" name="delete_category" value="1" class="btn btn-sm btn-outline-danger" aria-label="Delete <?= htmlspecialchars($category['category_name'], ENT_QUOTES, 'UTF-8') ?>"><i class="bi bi-trash3"></i></button>
+                <div class="fi-category-name"><strong><?= htmlspecialchars($category['category_name'], ENT_QUOTES, 'UTF-8') ?></strong><span><?= $category['is_default'] ? 'Default category' : 'Custom category' ?></span></div>
+                <div class="fi-category-actions"><a class="btn btn-sm btn-outline-primary" href="?edit=<?= (int) $category['category_id'] ?>#editCategoryPanel"><i class="bi bi-pencil me-1"></i> Edit</a>
+                    <form method="post" onsubmit="return confirm('Delete this category? Categories in use by transactions, budgets, or Money Lab cannot be deleted.');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="category_id" value="<?= (int) $category['category_id'] ?>"><button type="submit" name="delete_category" value="1" class="btn btn-sm btn-outline-danger" aria-label="Delete <?= htmlspecialchars($category['category_name'], ENT_QUOTES, 'UTF-8') ?>"><i class="bi bi-trash3"></i></button>
                     </form></div>
             </div>
             <?php endforeach; ?>

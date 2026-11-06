@@ -14,7 +14,8 @@ if (!class_exists('ZipArchive')) {
     exit('Excel export requires PHP Zip. Enable extension=zip in XAMPP php.ini and restart Apache.');
 }
 
-function fw_xlsx_xml($text) {
+function fw_xlsx_xml($text)
+{
     $text = (string) $text;
     // Remove control characters not permitted in XML 1.0.
     $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', $text);
@@ -22,25 +23,32 @@ function fw_xlsx_xml($text) {
     return htmlspecialchars($text, ENT_QUOTES | ENT_XML1, 'UTF-8');
 }
 
-function fw_xlsx_cell($column, $row, $value, $style = 0, $numeric = false) {
+function fw_xlsx_cell($column, $row, $value, $style = 0, $numeric = false)
+{
     $ref = $column . $row;
     if ($numeric) {
         $number = (float) $value;
-        if (!is_finite($number)) $number = 0;
+        if (!is_finite($number)) {
+            $number = 0;
+        }
         return '<c r="' . $ref . '" s="' . (int) $style . '"><v>' . $number . '</v></c>';
     }
     return '<c r="' . $ref . '" s="' . (int) $style . '" t="inlineStr"><is><t xml:space="preserve">'
         . fw_xlsx_xml($value) . '</t></is></c>';
 }
 
-function fw_xlsx_row($number, $cells, $height = null) {
+function fw_xlsx_row($number, $cells, $height = null)
+{
     return '<row r="' . $number . '"' . ($height === null ? '' : ' ht="' . (int) $height . '" customHeight="1"')
         . '>' . implode('', $cells) . '</row>';
 }
 
-function fw_xlsx_excel_date($date) {
+function fw_xlsx_excel_date($date)
+{
     $dt = DateTimeImmutable::createFromFormat('!Y-m-d', (string) $date, new DateTimeZone('UTC'));
-    if (!$dt || $dt->format('Y-m-d') !== $date) return null;
+    if (!$dt || $dt->format('Y-m-d') !== $date) {
+        return null;
+    }
     $base = new DateTimeImmutable('1899-12-30', new DateTimeZone('UTC'));
     return (int) $base->diff($dt)->format('%r%a');
 }
@@ -80,7 +88,9 @@ $head_row = $section_row + 1;
 $rows[] = fw_xlsx_row($section_row, [fw_xlsx_cell('A', $section_row, 'TRANSACTION HISTORY', 5)], 27);
 $headers = ['ID', 'Date', 'Description', 'Category', 'Type', 'Currency', 'Amount'];
 $head_cells = [];
-foreach ($headers as $i => $head) $head_cells[] = fw_xlsx_cell(chr(65 + $i), $head_row, $head, 9);
+foreach ($headers as $i => $head) {
+    $head_cells[] = fw_xlsx_cell(chr(65 + $i), $head_row, $head, 9);
+}
 $rows[] = fw_xlsx_row($head_row, $head_cells, 26);
 
 $first_data_row = $head_row + 1;
@@ -182,7 +192,9 @@ foreach ($files as $path => $contents) {
 $zip->close();
 
 $filename = 'fundwise_report_' . $start_date . '_to_' . $end_date . '.xlsx';
-while (ob_get_level()) ob_end_clean();
+while (ob_get_level()) {
+    ob_end_clean();
+}
 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 header('Content-Disposition: attachment; filename="' . $filename . '"');
 header('Content-Length: ' . filesize($tmp));

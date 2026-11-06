@@ -158,15 +158,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
     // Archive instead of destroying financial history. Restore is available below.
-    if(in_array($action,['delete_goal','restore_goal'],true)){
-        $goal_id=fw_positive_id($_POST['goal_id']??null);
-        if(fw_query($conn,'SELECT goal_id FROM savings_goals WHERE goal_id=? AND user_id=?','ii',[$goal_id,$user_id])){
-            if($action==='restore_goal')fw_query($conn,'DELETE FROM fw_goal_archives WHERE goal_id=? AND user_id=?','ii',[$goal_id,$user_id]);
-            else fw_query($conn,'INSERT IGNORE INTO fw_goal_archives(goal_id,user_id) VALUES (?,?)','ii',[$goal_id,$user_id]);
-            fw_audit($conn,$user_id,$action==='restore_goal'?'goal.restored':'goal.archived',$goal_id);
-            $_SESSION['savings_message']=$action==='restore_goal'?'Goal restored.':'Goal archived. Its money and contribution history are preserved.';
-        }else $_SESSION['savings_message']='Goal not found.';
-        header('Location: index.php');exit;
+    if (in_array($action, ['delete_goal', 'restore_goal'], true)) {
+        $goal_id = fw_positive_id($_POST['goal_id'] ?? null);
+        if (fw_query($conn, 'SELECT goal_id FROM savings_goals WHERE goal_id=? AND user_id=?', 'ii', [$goal_id, $user_id])) {
+            if ($action === 'restore_goal') {
+                fw_query($conn, 'DELETE FROM fw_goal_archives WHERE goal_id=? AND user_id=?', 'ii', [$goal_id, $user_id]);
+            } else {
+                fw_query($conn, 'INSERT IGNORE INTO fw_goal_archives(goal_id,user_id) VALUES (?,?)', 'ii', [$goal_id, $user_id]);
+            }
+            fw_audit($conn, $user_id, $action === 'restore_goal' ? 'goal.restored' : 'goal.archived', $goal_id);
+            $_SESSION['savings_message'] = $action === 'restore_goal' ? 'Goal restored.' : 'Goal archived. Its money and contribution history are preserved.';
+        } else {
+            $_SESSION['savings_message'] = 'Goal not found.';
+        }
+        header('Location: index.php');
+        exit;
     }
 
     // ADD SAVINGS CONTRIBUTION OR WITHDRAWAL
@@ -300,10 +306,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     throw new Exception("Unable to save the contribution.");
                 }
 
-                $contributionId=(int)mysqli_stmt_insert_id($insert_stmt);
-                fw_revision($conn,$user_id,'savings_contribution',$contributionId,'created',null,['goal_id'=>$goal_id,'type'=>$contribution_type,'amount'=>number_format($amount,2,'.',''),'date'=>$contribution_date,'notes'=>$notes]);
+                $contributionId = (int) mysqli_stmt_insert_id($insert_stmt);
+                fw_revision($conn, $user_id, 'savings_contribution', $contributionId, 'created', null, ['goal_id' => $goal_id, 'type' => $contribution_type, 'amount' => number_format($amount, 2, '.', ''), 'date' => $contribution_date, 'notes' => $notes]);
                 mysqli_stmt_close($insert_stmt);
-                if(!mysqli_commit($conn))throw new RuntimeException('Unable to finish contribution.');
+                if (!mysqli_commit($conn)) {
+                    throw new RuntimeException('Unable to finish contribution.');
+                }
 
                 $_SESSION["savings_message"] =
                     ($contribution_type === "deposit")
@@ -319,7 +327,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 mysqli_rollback($conn);
 
-                error_log('Savings operation failed: '.$e->getMessage()); $message = 'Unable to save this contribution. Check the amount and available savings balance.';
+                error_log('Savings operation failed: ' . $e->getMessage());
+                $message = 'Unable to save this contribution. Check the amount and available savings balance.';
                 $message_type = "danger";
             }
         }
@@ -382,8 +391,8 @@ while ($row = mysqli_fetch_assoc($goals_result)) {
 
 mysqli_stmt_close($goals_stmt);
 
-$archiveRows=fw_query($conn,'SELECT goal_id FROM fw_goal_archives WHERE user_id=?','i',[$user_id]);
-$archivedIds=array_map(static fn($r)=>(int)$r['goal_id'],$archiveRows);
+$archiveRows = fw_query($conn, 'SELECT goal_id FROM fw_goal_archives WHERE user_id=?', 'i', [$user_id]);
+$archivedIds = array_map(static fn ($r) => (int) $r['goal_id'], $archiveRows);
 // Calculate total savings
 $total_savings = 0;
 $total_targets = 0;
@@ -706,7 +715,7 @@ require_once __DIR__ . "/../includes/header.php";
 
         </h5>
 
-        <form method="POST"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
+        <form method="POST"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
 
             <input type="hidden" name="csrf_token"
                    value="<?php echo htmlspecialchars($_SESSION["csrf_token"]); ?>">
@@ -798,7 +807,7 @@ require_once __DIR__ . "/../includes/header.php";
                 Record Savings Contribution
             </h5>
 
-            <form method="POST"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
+            <form method="POST"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
 
                 <input type="hidden" name="csrf_token"
                        value="<?php echo htmlspecialchars($_SESSION["csrf_token"]); ?>">
@@ -929,17 +938,17 @@ require_once __DIR__ . "/../includes/header.php";
                     <?php
 
                         $target = $goal["target_amount"];
-                        $balance = $goal["savings_balance"];
+                    $balance = $goal["savings_balance"];
 
-                        $remaining = $target - $balance;
+                    $remaining = $target - $balance;
 
-                        $percentage = $target > 0
-                            ? ($balance / $target) * 100
-                            : 0;
+                    $percentage = $target > 0
+                        ? ($balance / $target) * 100
+                        : 0;
 
-                        $bar_percentage = min(100, max(0, $percentage));
+                    $bar_percentage = min(100, max(0, $percentage));
 
-                        $goal_completed = $balance >= $target;
+                    $goal_completed = $balance >= $target;
 
                     ?>
 
@@ -966,7 +975,7 @@ require_once __DIR__ . "/../includes/header.php";
 
                                 </div>
 
-                                <?php if(in_array((int)$goal['goal_id'],$archivedIds,true)): ?><span class="badge bg-secondary">Archived</span><?php elseif ($goal_completed): ?>
+                                <?php if (in_array((int) $goal['goal_id'], $archivedIds, true)): ?><span class="badge bg-secondary">Archived</span><?php elseif ($goal_completed): ?>
 
                                     <span class="badge bg-success">
                                         Completed
@@ -1058,12 +1067,12 @@ require_once __DIR__ . "/../includes/header.php";
                                 </a>
 
                                 <form method="POST"
-                                      onsubmit="return confirm('Archive this goal? Its balance and contribution history will be preserved.');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
+                                      onsubmit="return confirm('Archive this goal? Its balance and contribution history will be preserved.');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
 
                                     <input type="hidden" name="csrf_token"
                                            value="<?php echo htmlspecialchars($_SESSION["csrf_token"]); ?>">
 
-                                    <input type="hidden" name="action" value="<?= in_array((int)$goal['goal_id'],$archivedIds,true)?'restore_goal':'delete_goal' ?>">
+                                    <input type="hidden" name="action" value="<?= in_array((int) $goal['goal_id'], $archivedIds, true) ? 'restore_goal' : 'delete_goal' ?>">
 
                                     <input type="hidden" name="goal_id"
                                            value="<?php echo (int) $goal["goal_id"]; ?>">
@@ -1071,7 +1080,7 @@ require_once __DIR__ . "/../includes/header.php";
                                     <button type="submit"
                                             class="btn btn-sm btn-outline-danger">
 
-                                        <i class="bi bi-archive" aria-hidden="true"></i> <?= in_array((int)$goal['goal_id'],$archivedIds,true)?'Restore':'Archive' ?>
+                                        <i class="bi bi-archive" aria-hidden="true"></i> <?= in_array((int) $goal['goal_id'], $archivedIds, true) ? 'Restore' : 'Archive' ?>
 
                                     </button>
 

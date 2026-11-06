@@ -1,5 +1,13 @@
 # Changelog
 
+## November 6, 2026 - Maintainability refactor
+
+- Share login/registration layout, password controls, form-token markup and display helpers.
+- Consolidate financial-intelligence SQL and schema checks using the existing prepared-query helpers, and share the currency lookup with Reports.
+- Remove unused legacy styles/scripts, unused helpers and an unused work-cost argument.
+- Expand compact PHP controllers and format active JavaScript consistently; document repeatable formatting.
+- Keep routes, financial rules, security checks and schema compatible with Update3.
+
 ## November 5, 2026 - Update3
 
 - Center password visibility controls inside consistently sized fields across authentication and Settings.

@@ -1,0 +1,37 @@
+{
+  "date": "2026-11-06",
+  "baseline_commit": "ba1084c5b1ee7ce3969b44d357807e5a11855c0c",
+  "environment": "Isolated local PHP/MySQL with synthetic accounts; Chrome",
+  "php_syntax_files": 61,
+  "functional_http_checks": {
+    "intelligence": 84,
+    "general_features": 55,
+    "reminders": 38,
+    "installments_and_update2": 61,
+    "edge_cases": 17,
+    "work_cost_categories": 24
+  },
+  "functional_http_total": 279,
+  "pure_suites": [
+    "input validation",
+    "expense/password/recovery",
+    "loan calculations",
+    "20 cost-category compatibility checks",
+    "18 shared-view security checks"
+  ],
+  "focused_browser_checks": 118,
+  "focused_browser_layouts": 30,
+  "site_layout_checks": 51,
+  "before_after_layouts": 24,
+  "before_after_identical_controls_and_visible_text": true,
+  "before_after_pixel_identical": 24,
+  "javascript_exceptions": 0,
+  "php_equivalence_review": {
+    "files_checked": 43,
+    "unexpected_token_changes": 0,
+    "normalization": "Whitespace/comments, formatter-added braces and explicit helper renames. The 12 deliberately restructured files were reviewed separately."
+  },
+  "javascript_format_verification": "Prettier 3.6.2 --debug-check verified parsed behavior preservation before formatting; final syntax/style checks passed.",
+  "schema_migration": false,
+  "limits": "Local regression and visual evidence do not certify production availability, every security property or accessibility."
+}

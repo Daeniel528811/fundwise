@@ -47,31 +47,8 @@ if (!fw_valid_date($start_date) || !fw_valid_date($end_date)) {
     $date_error = "The start date cannot be later than the end date.";
 }
 
-// Get user's preferred currency code
-$currency = "PHP";
-
-$stmt = mysqli_prepare($conn, "
-    SELECT preferred_currency
-    FROM users
-    WHERE user_id = ?
-");
-
-mysqli_stmt_bind_param($stmt, "i", $user_id);
-mysqli_stmt_execute($stmt);
-$user_result = mysqli_stmt_get_result($stmt);
-$user_data = mysqli_fetch_assoc($user_result);
-mysqli_stmt_close($stmt);
-
-if (!empty($user_data["preferred_currency"])) {
-    $currency = $user_data["preferred_currency"];
-}
-
-$currency = strtoupper((string) $currency);
-$currency_code = preg_match('/^[A-Z]{3}$/D', $currency) ? $currency : "PHP";
-
-function moneyFormat($amount, $currency) {
-    return $currency . " " . number_format((float) $amount, 2);
-}
+require_once __DIR__ . '/../includes/currency_display.php';
+$currency_code = fw_user_currency_code($conn, $user_id);
 
 $total_income = 0;
 $total_expenses = 0;
@@ -143,7 +120,10 @@ if ($date_error === "") {
 
     mysqli_stmt_close($stmt);
 
-    if(count($transactions)>5000){http_response_code(422);exit('This report exceeds 5,000 records. Select a smaller custom date range. No partial report was exported.');}
+    if (count($transactions) > 5000) {
+        http_response_code(422);
+        exit('This report exceeds 5,000 records. Select a smaller custom date range. No partial report was exported.');
+    }
 
     // Expense breakdown by category
     $breakdown_sql = "
@@ -423,7 +403,7 @@ require_once __DIR__ . "/../includes/header.php";
                         <div class="summary-card">
                             <p class="text-muted mb-1">Total Income</p>
                             <div class="summary-number income-text">
-                                <?= moneyFormat($total_income, $currency_code) ?>
+                                <?= fw_format_money($total_income, $currency_code) ?>
                             </div>
                         </div>
                     </div>
@@ -432,7 +412,7 @@ require_once __DIR__ . "/../includes/header.php";
                         <div class="summary-card">
                             <p class="text-muted mb-1">Total Expenses</p>
                             <div class="summary-number expense-text">
-                                <?= moneyFormat($total_expenses, $currency_code) ?>
+                                <?= fw_format_money($total_expenses, $currency_code) ?>
                             </div>
                         </div>
                     </div>
@@ -441,7 +421,7 @@ require_once __DIR__ . "/../includes/header.php";
                         <div class="summary-card">
                             <p class="text-muted mb-1">Remaining Balance</p>
                             <div class="summary-number">
-                                <?= moneyFormat($remaining_balance, $currency_code) ?>
+                                <?= fw_format_money($remaining_balance, $currency_code) ?>
                             </div>
                         </div>
                     </div>
@@ -488,7 +468,7 @@ require_once __DIR__ . "/../includes/header.php";
                                             </td>
 
                                             <td>
-                                                <?= moneyFormat($category["total_amount"], $currency_code) ?>
+                                                <?= fw_format_money($category["total_amount"], $currency_code) ?>
                                             </td>
 
                                             <td>
@@ -583,7 +563,7 @@ require_once __DIR__ . "/../includes/header.php";
 
                                             <td class="<?= $transaction["transaction_type"] === "income" ? "income-text" : "expense-text" ?>">
                                                 <?= $transaction["transaction_type"] === "income" ? "+" : "-" ?>
-                                                <?= moneyFormat($transaction["amount"], $currency_code) ?>
+                                                <?= fw_format_money($transaction["amount"], $currency_code) ?>
                                             </td>
                                         </tr>
 

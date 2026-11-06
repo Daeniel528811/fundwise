@@ -22,11 +22,14 @@ mysqli_stmt_close($stmt);
 $full_name = $user["full_name"] ?? "User";
 $currency = strtoupper($user["preferred_currency"] ?? "PHP");
 
-if (!preg_match('/^[A-Z]{3}$/D', $currency)) { $currency='PHP'; }
+if (!preg_match('/^[A-Z]{3}$/D', $currency)) {
+    $currency = 'PHP';
+}
 
 
 // HELPER FOR CURRENCY DISPLAY
-function formatMoney($amount, $currency) {
+function formatMoney($amount, $currency)
+{
     return $currency . " " . number_format((float) $amount, 2);
 }
 
@@ -502,7 +505,7 @@ require_once __DIR__ . "/includes/header.php";
         <div class="col-sm-6 col-xl-3"><div class="fw-stat focus">
             <div class="fw-stat-top"><span class="fw-stat-icon balance"><i class="bi bi-wallet2" aria-hidden="true"></i></span><span class="fw-stat-tag">Net balance</span></div>
             <div class="fw-stat-label">Recorded cash-flow balance</div><h3><?= htmlspecialchars(formatMoney($remainingBalance, $currency), ENT_QUOTES, 'UTF-8') ?></h3>
-            <p class="fw-stat-foot"><?= $remainingBalance<0?'<span class="fw-negative-label"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> Negative cash flow</span>':'Income minus expenses' ?></p>
+            <p class="fw-stat-foot"><?= $remainingBalance < 0 ? '<span class="fw-negative-label"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> Negative cash flow</span>' : 'Income minus expenses' ?></p>
         </div></div>
         <div class="col-sm-6 col-xl-3"><div class="fw-stat">
             <div class="fw-stat-top"><span class="fw-stat-icon savings"><i class="bi bi-piggy-bank" aria-hidden="true"></i></span><span class="fw-stat-tag">Saved money</span></div>
@@ -515,7 +518,7 @@ require_once __DIR__ . "/includes/header.php";
     <div class="fw-section-heading mt-2">
         <div><h2>Money insights</h2></div>
     </div>
-    <?php require __DIR__."/includes/dashboard_budgets.php"; ?>
+    <?php require __DIR__ . "/includes/dashboard_budgets.php"; ?>
     <section class="row g-4 mb-4" aria-label="Financial charts and savings goals">
         <div class="col-xl-7">
             <div class="fw-dashboard-panel">
@@ -553,16 +556,18 @@ require_once __DIR__ . "/includes/header.php";
                 </div>
                 <?php if (count($savingsGoals) > 0): ?>
                     <?php foreach ($savingsGoals as $goal): ?>
-                        <?php $target=(float)$goal['target_amount']; $current=(float)$goal['current_amount']; $progress=$target>0?min(100,max(0,($current/$target)*100)):0; ?>
+                        <?php $target = (float) $goal['target_amount'];
+                        $current = (float) $goal['current_amount'];
+                        $progress = $target > 0 ? min(100, max(0, ($current / $target) * 100)) : 0; ?>
                         <div class="fw-goal-entry">
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <span class="fw-goal-title"><?= htmlspecialchars($goal['goal_name'], ENT_QUOTES, 'UTF-8') ?></span>
-                                <span class="fw-goal-amount"><?= htmlspecialchars(formatMoney($current,$currency), ENT_QUOTES, 'UTF-8') ?> / <?= htmlspecialchars(formatMoney($target,$currency), ENT_QUOTES, 'UTF-8') ?></span>
+                                <span class="fw-goal-amount"><?= htmlspecialchars(formatMoney($current, $currency), ENT_QUOTES, 'UTF-8') ?> / <?= htmlspecialchars(formatMoney($target, $currency), ENT_QUOTES, 'UTF-8') ?></span>
                             </div>
-                            <div class="progress mt-2" aria-label="<?= number_format($progress,1) ?>% completed">
-                                <div class="progress-bar" role="progressbar" aria-valuenow="<?= number_format($progress,1,'.','') ?>" aria-valuemin="0" aria-valuemax="100" style="width:<?= number_format($progress,1,'.','') ?>%"></div>
+                            <div class="progress mt-2" aria-label="<?= number_format($progress, 1) ?>% completed">
+                                <div class="progress-bar" role="progressbar" aria-valuenow="<?= number_format($progress, 1, '.', '') ?>" aria-valuemin="0" aria-valuemax="100" style="width:<?= number_format($progress, 1, '.', '') ?>%"></div>
                             </div>
-                            <div class="fw-goal-meta"><span><?= number_format($progress,1) ?>% complete</span>
+                            <div class="fw-goal-meta"><span><?= number_format($progress, 1) ?>% complete</span>
                             <?php if (!empty($goal['target_date'])): ?><span><i class="bi bi-calendar-event me-1" aria-hidden="true"></i>Target: <?= htmlspecialchars($goal['target_date'], ENT_QUOTES, 'UTF-8') ?></span><?php endif; ?></div>
                         </div>
                     <?php endforeach; ?>
@@ -598,8 +603,8 @@ require_once __DIR__ . "/includes/header.php";
                                 <td><?= htmlspecialchars($transaction['transaction_date'], ENT_QUOTES, 'UTF-8') ?></td>
                                 <td class="fw-semibold"><?= htmlspecialchars($transaction['description'] ?: 'No description', ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><?= htmlspecialchars($transaction['category_name'] ?? 'Uncategorized', ENT_QUOTES, 'UTF-8') ?></td>
-                                <td><span class="badge <?= $transaction['transaction_type']==='income'?'bg-success':'bg-danger' ?>"><?= $transaction['transaction_type']==='income'?'Income':'Expense' ?></span></td>
-                                <td class="text-end fw-semibold"><?= htmlspecialchars(formatMoney($transaction['amount'],$currency), ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><span class="badge <?= $transaction['transaction_type'] === 'income' ? 'bg-success' : 'bg-danger' ?>"><?= $transaction['transaction_type'] === 'income' ? 'Income' : 'Expense' ?></span></td>
+                                <td class="text-end fw-semibold"><?= htmlspecialchars(formatMoney($transaction['amount'], $currency), ENT_QUOTES, 'UTF-8') ?></td>
                             </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
@@ -620,7 +625,7 @@ require_once __DIR__ . "/includes/header.php";
                     <?php foreach ($recentNotifications as $notification): ?>
                     <div class="fw-activity-entry">
                         <span class="fw-activity-dot"><i class="bi bi-bell" aria-hidden="true"></i></span>
-                        <div><p><?= htmlspecialchars($notification['message'], ENT_QUOTES, 'UTF-8') ?></p><small><?= date('M d, Y h:i A',strtotime($notification['created_at'])) ?></small></div>
+                        <div><p><?= htmlspecialchars($notification['message'], ENT_QUOTES, 'UTF-8') ?></p><small><?= date('M d, Y h:i A', strtotime($notification['created_at'])) ?></small></div>
                     </div>
                     <?php endforeach; ?>
                 <?php else: ?>

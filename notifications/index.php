@@ -13,7 +13,7 @@ if (empty($_SESSION["notification_csrf"])) {
     $_SESSION["notification_csrf"] = bin2hex(random_bytes(32));
 }
 
-fw_budget_notifications($conn,$user_id);
+fw_budget_notifications($conn, $user_id);
 
 // Process notification actions
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
@@ -261,7 +261,7 @@ require_once __DIR__ . "/../includes/header.php";
 
                                 <?php if ((int) $notification["is_read"] === 0): ?>
 
-                                    <form method="POST"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
+                                    <form method="POST"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
                                         <input type="hidden" name="csrf_token"
                                                value="<?= htmlspecialchars($_SESSION["notification_csrf"]) ?>">
 
@@ -278,7 +278,7 @@ require_once __DIR__ . "/../includes/header.php";
                                 <?php endif; ?>
 
                                 <form method="POST"
-                                      onsubmit="return confirm('Delete this notification?');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
+                                      onsubmit="return confirm('Delete this notification?');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
 
                                     <input type="hidden" name="csrf_token"
                                            value="<?= htmlspecialchars($_SESSION["notification_csrf"]) ?>">

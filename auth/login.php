@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $password = $_POST['password'] ?? null;
         if (!filter_var($email, FILTER_VALIDATE_EMAIL) || !is_string($password)) {
             $message = "Invalid email or password.";
-        } elseif (!fw_auth_attempt($conn,$email)) {
+        } elseif (!fw_auth_attempt($conn, $email)) {
             http_response_code(429);
             $message = 'Too many attempts. Try again in 15 minutes.';
         } else {
@@ -37,9 +37,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($account && password_verify($password, $account['password'])) {
                 session_regenerate_id(true);
                 $_SESSION['user_id'] = (int) $account['user_id'];
-                $_SESSION['credential_version']=fw_security_version($conn,(int)$account['user_id']);
-                $_SESSION['authenticated_at']=time();$_SESSION['last_activity']=time();
-                fw_auth_success($conn,$email);fw_audit($conn,(int)$account['user_id'],'login.success');
+                $_SESSION['credential_version'] = fw_security_version($conn, (int) $account['user_id']);
+                $_SESSION['authenticated_at'] = time();
+                $_SESSION['last_activity'] = time();
+                fw_auth_success($conn, $email);
+                fw_audit($conn, (int) $account['user_id'], 'login.success');
                 $_SESSION['full_name'] = $account['full_name'];
                 $_SESSION['email'] = $account['email'];
                 $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -52,60 +54,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#101c31">
-  <title>Sign in | Fundwise</title>
-  <link rel="icon" type="image/png" href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/assets/fundwise-mark.png">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/css/app.css?v=reliability-20261102" rel="stylesheet">
-<link href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/reliability.css?v=20261102" rel="stylesheet">
-<link href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/refinements.css?v=20261104-polish2" rel="stylesheet">
-<link href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/css/auth-refinement.css?v=20261104-auth1" rel="stylesheet">
-<link rel="stylesheet" href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/controls.css?v=20261105-u3">
-</head>
-<body class="fw-controls-v3">
-  <main class="fw-auth fw-auth-refined">
-    <aside class="fw-auth-side" aria-label="About Fundwise">
-      <a class="fw-auth-brand" href="login.php">
-        <span class="fw-brand-icon"><img src="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/assets/fundwise-mark.png" alt=""></span>
-        <span><strong>Fundwise</strong></span>
-      </a>
-      <div class="fw-auth-feature"><span class="fw-auth-eyebrow">YOUR MONEY, IN VIEW</span><h1>Track your money.<br><span>Plan ahead.</span></h1><p>Income, expenses, budgets, and savings in one place.</p><div class="fw-auth-pillars"><span><i class="bi bi-arrow-left-right" aria-hidden="true"></i>Track daily</span><span><i class="bi bi-pie-chart" aria-hidden="true"></i>Plan spending</span><span><i class="bi bi-piggy-bank" aria-hidden="true"></i>Build savings</span></div></div>
-      <div class="fw-auth-art" aria-hidden="true"><img src="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/assets/fundwise-mark.png" alt=""></div>
-    </aside>
-    <section class="fw-auth-form-side" aria-label="Sign in">
-      <div class="fw-auth-form-wrap">
-        <span class="fw-auth-kicker">WELCOME BACK</span><h2>Sign in to Fundwise</h2><p class="fw-auth-intro">Pick up where you left off.</p>
+<?php
+$authPage = ['title' => 'Sign in', 'kicker' => 'WELCOME BACK', 'heading' => 'Sign in to Fundwise', 'intro' => 'Pick up where you left off.'];
+require __DIR__ . '/../includes/auth_page_start.php';
+?>
         <?php if ($message !== ''): ?>
           <div class="alert alert-danger" role="alert"><i class="bi bi-exclamation-circle me-2" aria-hidden="true"></i><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div>
         <?php endif; ?>
-        <?php if(isset($_GET['expired'])):?><div class="alert alert-info">Your session expired or your credentials changed. Please sign in again.</div><?php endif;?>
-<?php if(isset($_SESSION['recovery_notice'])):$savedCode=$_SESSION['recovery_notice'];unset($_SESSION['recovery_notice']);?><div class="alert alert-success fw-security-message">Password reset. Save this replacement recovery code now; it is shown once.<code class="fw-recovery-code"><?= htmlspecialchars($savedCode,ENT_QUOTES,'UTF-8') ?></code></div><?php endif;?>
-<form method="POST" autocomplete="on"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
-          <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
+        <?php if (isset($_GET['expired'])):?><div class="alert alert-info">Your session expired or your credentials changed. Please sign in again.</div><?php endif; ?>
+<?php if (isset($_SESSION['recovery_notice'])):$savedCode = $_SESSION['recovery_notice'];
+            unset($_SESSION['recovery_notice']); ?><div class="alert alert-success fw-security-message">Password reset. Save this replacement recovery code now; it is shown once.<code class="fw-recovery-code"><?= htmlspecialchars($savedCode, ENT_QUOTES, 'UTF-8') ?></code></div><?php endif; ?>
+<form method="POST" autocomplete="on"><?php fw_form_tokens(); ?>
           <div class="fw-auth-field">
             <label for="fwLoginEmail">Email address</label>
             <input id="fwLoginEmail" type="email" name="email" class="form-control" placeholder="you@example.com" autocomplete="username" required autofocus>
           </div>
           <div class="fw-auth-field">
             <label for="fwLoginPassword">Password</label>
-            <div class="fw-password-wrap">
-              <input id="fwLoginPassword" type="password" name="password" class="form-control" placeholder="Enter your password" autocomplete="current-password" required>
-              <button type="button" class="fw-password-btn" data-fw-password-toggle="fwLoginPassword" aria-label="Show password" title="Show password"><i class="bi bi-eye-slash" aria-hidden="true"></i></button>
-            </div>
+            <?php fw_password_field('fwLoginPassword', 'password', ['placeholder' => 'Enter your password', 'autocomplete' => 'current-password', 'required' => true]); ?>
           </div>
           <button class="btn btn-primary fw-auth-submit w-100 mt-2" type="submit">Sign in <i class="bi bi-arrow-right ms-2" aria-hidden="true"></i></button>
         </form>
         <a class="fw-security-link" href="recover.php">Forgot password? Use your recovery code</a>
         <p class="fw-auth-bottom">New to Fundwise? <a href="register.php" class="fw-bold text-decoration-none">Create an account <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></p>
-      </div>
-    </section>
-  </main>
-  <script src="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/js/ui.js?v=20261105-u3"></script>
-</body>
-</html>
+<?php require __DIR__ . '/../includes/auth_page_end.php'; ?>

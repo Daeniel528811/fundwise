@@ -60,3 +60,7 @@ Local automated results do not establish comprehensive security, production avai
 ## Update3 verification - 2026-11-05
 
 Password eyes and outlined actions passed light/dark desktop, tablet and phone checks, including keyboard focus and touch release. Five work-cost choices passed create/edit, totals, ownership and legacy preservation checks. See [results](testing/update3-results.json). No schema migration is required.
+
+## Maintainability refactor - 2026-11-06
+
+All 279 HTTP regression checks passed, alongside the existing pure suites and 18 shared-view security checks. The 24 before/after layouts retained the same controls and visible text. Focused browser tests passed 118 checks over 30 layouts, with 51 further page/viewport checks. See [results](testing/refactor-results.json) and [maintenance guide](MAINTAINABILITY.md). No schema migration is needed.

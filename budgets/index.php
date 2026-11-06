@@ -100,8 +100,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 }
 
                 // Serialize budget writes per owner before the overlap check.
-                if(!mysqli_begin_transaction($conn))throw new RuntimeException('Unable to start budget update.');
-                fw_query($conn,'SELECT user_id FROM users WHERE user_id=? FOR UPDATE','i',[$user_id]);
+                if (!mysqli_begin_transaction($conn)) {
+                    throw new RuntimeException('Unable to start budget update.');
+                }
+                fw_query($conn, 'SELECT user_id FROM users WHERE user_id=? FOR UPDATE', 'i', [$user_id]);
                 // Prevent overlapping budgets for the same expense category.
                 // Both start and end dates are inclusive.
                 $overlap_stmt = mysqli_prepare($conn, "
@@ -114,8 +116,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     LIMIT 1
                 ");
                 mysqli_stmt_bind_param(
-                    $overlap_stmt, "iiiss",
-                    $user_id, $category_id, $budget_id, $end_date, $start_date
+                    $overlap_stmt,
+                    "iiiss",
+                    $user_id,
+                    $category_id,
+                    $budget_id,
+                    $end_date,
+                    $start_date
                 );
                 mysqli_stmt_execute($overlap_stmt);
                 $has_overlap = mysqli_num_rows(mysqli_stmt_get_result($overlap_stmt)) > 0;
@@ -129,10 +136,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $message_type = "danger";
                 } else {
 
-                if ($budget_id > 0) {
+                    if ($budget_id > 0) {
 
-                    // Update only the current user's budget
-                    $sql = "
+                        // Update only the current user's budget
+                        $sql = "
                         UPDATE budgets
                         SET category_id = ?,
                             budget_limit = ?,
@@ -142,23 +149,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         AND user_id = ?
                     ";
 
-                    $stmt = mysqli_prepare($conn, $sql);
+                        $stmt = mysqli_prepare($conn, $sql);
 
-                    mysqli_stmt_bind_param(
-                        $stmt,
-                        "idssii",
-                        $category_id,
-                        $budget_limit,
-                        $start_date,
-                        $end_date,
-                        $budget_id,
-                        $user_id
-                    );
+                        mysqli_stmt_bind_param(
+                            $stmt,
+                            "idssii",
+                            $category_id,
+                            $budget_limit,
+                            $start_date,
+                            $end_date,
+                            $budget_id,
+                            $user_id
+                        );
 
-                } else {
+                    } else {
 
-                    // Create a new budget
-                    $sql = "
+                        // Create a new budget
+                        $sql = "
                         INSERT INTO budgets
                         (
                             user_id,
@@ -170,43 +177,47 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         VALUES (?, ?, ?, ?, ?)
                     ";
 
-                    $stmt = mysqli_prepare($conn, $sql);
+                        $stmt = mysqli_prepare($conn, $sql);
 
-                    mysqli_stmt_bind_param(
-                        $stmt,
-                        "iidss",
-                        $user_id,
-                        $category_id,
-                        $budget_limit,
-                        $start_date,
-                        $end_date
-                    );
-                }
+                        mysqli_stmt_bind_param(
+                            $stmt,
+                            "iidss",
+                            $user_id,
+                            $category_id,
+                            $budget_limit,
+                            $start_date,
+                            $end_date
+                        );
+                    }
 
-                if (mysqli_stmt_execute($stmt)) {
+                    if (mysqli_stmt_execute($stmt)) {
 
-                    if(!mysqli_commit($conn))throw new RuntimeException('Unable to finish budget update.');
-                    $_SESSION["budget_message"] =
-                        ($budget_id > 0)
-                        ? "Budget updated successfully!"
-                        : "Budget created successfully!";
+                        if (!mysqli_commit($conn)) {
+                            throw new RuntimeException('Unable to finish budget update.');
+                        }
+                        $_SESSION["budget_message"] =
+                            ($budget_id > 0)
+                            ? "Budget updated successfully!"
+                            : "Budget created successfully!";
 
-                    $_SESSION["budget_message_type"] = "success";
+                        $_SESSION["budget_message_type"] = "success";
 
-                    mysqli_stmt_close($stmt);
+                        mysqli_stmt_close($stmt);
 
-                    header("Location: index.php");
-                    exit();
+                        header("Location: index.php");
+                        exit();
 
-                } else {
+                    } else {
 
-                    $message = "Unable to save the budget. Please try again.";
-                    $message_type = "danger";
+                        $message = "Unable to save the budget. Please try again.";
+                        $message_type = "danger";
 
-                    mysqli_stmt_close($stmt);
-                }
+                        mysqli_stmt_close($stmt);
+                    }
                 } // End validated budget save.
-                if($message!=='')mysqli_rollback($conn);
+                if ($message !== '') {
+                    mysqli_rollback($conn);
+                }
             }
         }
     }
@@ -556,7 +567,7 @@ require_once __DIR__ . "/../includes/header.php";
 
         <?php else: ?>
 
-            <form method="POST"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
+            <form method="POST"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
 
                 <input type="hidden" name="csrf_token"
                        value="<?php echo htmlspecialchars($_SESSION["csrf_token"]); ?>">
@@ -686,8 +697,8 @@ require_once __DIR__ . "/../includes/header.php";
 
             <?php
                 $overall_bar = min(100, max(0, $overall_percentage));
-                $overall_color = $overall_percentage > 100 ? "bg-danger" : "bg-primary";
-            ?>
+        $overall_color = $overall_percentage > 100 ? "bg-danger" : "bg-primary";
+        ?>
 
             <div class="progress">
                 <div class="progress-bar <?php echo $overall_color; ?>"
@@ -725,29 +736,29 @@ require_once __DIR__ . "/../includes/header.php";
 
                     <?php
 
-                        $limit = $budget["budget_limit"];
-                        $spent = $budget["total_spent"];
-                        $remaining = $limit - $spent;
+                    $limit = $budget["budget_limit"];
+                    $spent = $budget["total_spent"];
+                    $remaining = $limit - $spent;
 
-                        $percentage = $limit > 0
-                            ? ($spent / $limit) * 100
-                            : 0;
+                    $percentage = $limit > 0
+                        ? ($spent / $limit) * 100
+                        : 0;
 
-                        $bar_percentage = min(100, max(0, $percentage));
+                    $bar_percentage = min(100, max(0, $percentage));
 
-                        if ($percentage >= 100) {
-                            $bar_color = "bg-danger";
-                            $status = "Over Budget";
-                            $status_color = "text-danger";
-                        } elseif ($percentage >= 80) {
-                            $bar_color = "bg-warning";
-                            $status = "Near Limit";
-                            $status_color = "text-warning";
-                        } else {
-                            $bar_color = "bg-success";
-                            $status = "Within Budget";
-                            $status_color = "text-success";
-                        }
+                    if ($percentage >= 100) {
+                        $bar_color = "bg-danger";
+                        $status = "Over Budget";
+                        $status_color = "text-danger";
+                    } elseif ($percentage >= 80) {
+                        $bar_color = "bg-warning";
+                        $status = "Near Limit";
+                        $status_color = "text-warning";
+                    } else {
+                        $bar_color = "bg-success";
+                        $status = "Within Budget";
+                        $status_color = "text-success";
+                    }
 
                     ?>
 
@@ -827,7 +838,7 @@ require_once __DIR__ . "/../includes/header.php";
                                 </a>
 
                                 <form method="POST" class="flex-fill"
-                                      onsubmit="return confirm('Are you sure you want to delete this budget?');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(),ENT_QUOTES,'UTF-8') ?>">
+                                      onsubmit="return confirm('Are you sure you want to delete this budget?');"><input type="hidden" name="fw_request_token" value="<?= htmlspecialchars(fw_request_token(), ENT_QUOTES, 'UTF-8') ?>">
 
                                     <input type="hidden" name="csrf_token"
                                            value="<?php echo htmlspecialchars($_SESSION["csrf_token"]); ?>">

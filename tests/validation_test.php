@@ -1,9 +1,16 @@
 <?php
 // CLI-only basic tests: php tests/validation_test.php
-if (PHP_SAPI !== "cli") { http_response_code(404); exit; }
+if (PHP_SAPI !== "cli") {
+    http_response_code(404);
+    exit;
+}
 require_once __DIR__ . '/../includes/input.php';
-function check($passed, $message): void {
-    if (!$passed) { fwrite(STDERR, "FAIL: $message\n"); exit(1); }
+function check($passed, $message): void
+{
+    if (!$passed) {
+        fwrite(STDERR, "FAIL: $message\n");
+        exit(1);
+    }
 }
 check(fw_text(['bad']) === '', 'non-string text');
 check(fw_positive_id('12') === 12, 'valid ID');

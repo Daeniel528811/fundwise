@@ -5,9 +5,9 @@ require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/session.php';
 require_once __DIR__ . '/reliability.php';
-fw_budget_notifications($conn,(int)($_SESSION['user_id']??0));
-fw_debt_due_notifications($conn,(int)($_SESSION['user_id']??0));
-fw_personal_reminder_notifications($conn,(int)($_SESSION['user_id']??0));
+fw_budget_notifications($conn, (int) ($_SESSION['user_id'] ?? 0));
+fw_debt_due_notifications($conn, (int) ($_SESSION['user_id'] ?? 0));
+fw_personal_reminder_notifications($conn, (int) ($_SESSION['user_id'] ?? 0));
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: ' . BASE_URL . '/auth/login.php');
@@ -47,7 +47,7 @@ $pageHead = $pageHead ?? '';
 $__initial = strtoupper(substr(trim((string) $__name), 0, 1));
 $__initial = preg_match('/^[A-Z]$/', $__initial) ? $__initial : 'F';
 $__today = (new DateTimeImmutable('now', new DateTimeZone('Asia/Manila')))->format('M d, Y');
-$__esc = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+$__esc = static fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
 ?>
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="<?= $__esc($__theme) ?>">
@@ -66,11 +66,11 @@ $__esc = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <?= $pageHead ?>
     <link href="<?= $__esc(BASE_URL) ?>/css/app.css?v=reliability-20261102" rel="stylesheet">
-<link href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/reliability.css?v=20261102" rel="stylesheet">
-<link rel="stylesheet" href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/general.css?v=20261104-polish2">
-<link rel="stylesheet" href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/refinements.css?v=20261104-polish2">
-<link rel="stylesheet" href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/update2.css?v=20261104-u2">
-<link rel="stylesheet" href="<?= htmlspecialchars(BASE_URL,ENT_QUOTES,'UTF-8') ?>/css/controls.css?v=20261105-u3">
+<link href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/css/reliability.css?v=20261102" rel="stylesheet">
+<link rel="stylesheet" href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/css/general.css?v=20261104-polish2">
+<link rel="stylesheet" href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/css/refinements.css?v=20261104-polish2">
+<link rel="stylesheet" href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/css/update2.css?v=20261104-u2">
+<link rel="stylesheet" href="<?= htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8') ?>/css/controls.css?v=20261105-u3">
 </head>
 <body class="fw-controls-v3">
 <a class="fw-skip" href="#fw-content">Skip to content</a>
